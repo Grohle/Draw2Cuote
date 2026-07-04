@@ -1,8 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { z } from 'zod';
+import { z } from 'zod/v4';
+import {
+  esProveedorValido,
+  llamarGoogle,
+  llamarOpenAICompat,
+  PRESETS,
+  probarProveedorRemoto,
+  resolverBaseUrl,
+} from './proveedores.js';
 
-export const MODELOS_PERMITIDOS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
+export const MODELOS_ANTHROPIC = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
 export const MODELO_DEFECTO = 'claude-opus-4-8';
 
 const confianza = z
@@ -102,36 +110,38 @@ function crearCliente(apiKey) {
   return apiKey ? new Anthropic({ apiKey }) : new Anthropic();
 }
 
-/** Valida unas credenciales con una llamada gratuita a count_tokens. */
-export async function probarClave(apiKey) {
-  const client = crearCliente(apiKey);
-  await client.messages.countTokens({
-    model: MODELO_DEFECTO,
-    messages: [{ role: 'user', content: 'ping' }],
-  });
+const INSTRUCCION = 'Extrae los datos de este plano para presupuestarlo. Sigue las reglas del sistema al pie de la letra.';
+
+/** Prueba de conexión según el proveedor configurado. */
+export async function probarProveedor(config) {
+  const { proveedor = 'anthropic', apiKey } = config ?? {};
+  if (!esProveedorValido(proveedor)) {
+    const err = new Error(`Proveedor desconocido: ${proveedor}`);
+    err.status = 400;
+    throw err;
+  }
+  if (proveedor === 'anthropic') {
+    // count_tokens es gratuito y valida la clave (o las credenciales del servidor)
+    await crearCliente(apiKey).messages.countTokens({
+      model: MODELO_DEFECTO,
+      messages: [{ role: 'user', content: 'ping' }],
+    });
+    return;
+  }
+  await probarProveedorRemoto(config);
 }
 
-export async function extraerDatosPlano({ mediaType, dataBase64, apiKey, model }) {
-  if (!apiKey && !hayClaveServidor()) {
-    return { demo: true, datos: DATOS_DEMO };
-  }
-
+async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model }) {
   const client = crearCliente(apiKey);
   const response = await client.messages.parse({
-    model: MODELOS_PERMITIDOS.includes(model) ? model : MODELO_DEFECTO,
+    model: MODELOS_ANTHROPIC.includes(model) ? model : MODELO_DEFECTO,
     max_tokens: 16000,
     thinking: { type: 'adaptive' },
     system: SYSTEM,
     messages: [
       {
         role: 'user',
-        content: [
-          bloqueDocumento(mediaType, dataBase64),
-          {
-            type: 'text',
-            text: 'Extrae los datos de este plano para presupuestarlo. Sigue las reglas del sistema al pie de la letra.',
-          },
-        ],
+        content: [bloqueDocumento(mediaType, dataBase64), { type: 'text', text: INSTRUCCION }],
       },
     ],
     output_config: { format: zodOutputFormat(EsquemaExtraccion) },
@@ -147,7 +157,79 @@ export async function extraerDatosPlano({ mediaType, dataBase64, apiKey, model }
     err.status = 502;
     throw err;
   }
-  return { demo: false, datos: response.parsed_output };
+  return response.parsed_output;
+}
+
+/**
+ * Proveedores sin structured outputs nativos: se incrusta el esquema JSON en
+ * el prompt, se pide modo JSON y se valida la respuesta con Zod en el servidor.
+ */
+async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model }) {
+  if (!model || !model.trim()) {
+    const err = new Error('Indica el modelo a usar en Ajustes (debe tener visión).');
+    err.status = 400;
+    throw err;
+  }
+  if (PRESETS[proveedor].openaiCompat && mediaType === 'application/pdf') {
+    const err = new Error(
+      'Este proveedor no admite PDF: sube una imagen (PNG/JPG) del plano o cambia a Anthropic o Google Gemini en Ajustes.'
+    );
+    err.status = 415;
+    throw err;
+  }
+  if (proveedor === 'google' && !apiKey) {
+    const err = new Error('Google Gemini necesita una clave de API (gratuita en aistudio.google.com).');
+    err.status = 400;
+    throw err;
+  }
+
+  const esquemaJson = zodOutputFormat(EsquemaExtraccion).schema;
+  const instruccion = `${INSTRUCCION}\n\nResponde EXCLUSIVAMENTE con un objeto JSON válido, sin markdown ni texto adicional, que cumpla exactamente este JSON Schema:\n${JSON.stringify(esquemaJson)}`;
+  const parametros = {
+    baseUrl: resolverBaseUrl(proveedor, baseUrl),
+    apiKey,
+    model: model.trim(),
+    system: SYSTEM,
+    instruccion,
+    mediaType,
+    dataBase64,
+  };
+
+  const crudo = proveedor === 'google' ? await llamarGoogle(parametros) : await llamarOpenAICompat(parametros);
+  const validado = EsquemaExtraccion.safeParse(crudo);
+  if (!validado.success) {
+    const detalle = validado.error.issues
+      .slice(0, 3)
+      .map((i) => `${i.path.join('.')}: ${i.message}`)
+      .join('; ');
+    const err = new Error(
+      `El modelo devolvió un JSON que no cumple el esquema (${detalle}). Prueba con un modelo con visión más capaz o cambia de proveedor.`
+    );
+    err.status = 502;
+    throw err;
+  }
+  return validado.data;
+}
+
+export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
+  const { proveedor = 'anthropic', apiKey, baseUrl, modelo } = config ?? {};
+  if (!esProveedorValido(proveedor)) {
+    const err = new Error(`Proveedor desconocido: ${proveedor}`);
+    err.status = 400;
+    throw err;
+  }
+
+  if (proveedor === 'anthropic') {
+    if (!apiKey && !hayClaveServidor()) {
+      return { demo: true, datos: DATOS_DEMO };
+    }
+    return { demo: false, datos: await extraerConAnthropic({ mediaType, dataBase64, apiKey, model: modelo }) };
+  }
+
+  return {
+    demo: false,
+    datos: await extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model: modelo }),
+  };
 }
 
 // Datos de ejemplo para poder probar la UI sin credenciales de la API.

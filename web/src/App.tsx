@@ -1,25 +1,16 @@
 import { useEffect, useState } from 'react';
-import { cabecerasApi, cargarAjustes, MODELO_DEFECTO, type AjustesApp } from './ajustes';
+import { cargarAjustes, configApi, esModoDemo, type AjustesApp } from './ajustes';
 import { Ajustes } from './components/Ajustes';
 import { Dropzone, type ArchivoPlano } from './components/Dropzone';
 import { Resultados } from './components/Resultados';
+import { presetDe } from './proveedores';
 import type { Extraccion, RespuestaExtraccion } from './tipos';
-
-interface EstadoServidor {
-  serverKey: boolean;
-  modelos: string[];
-  modeloDefecto: string;
-}
 
 export default function App() {
   const [archivo, setArchivo] = useState<ArchivoPlano | null>(null);
   const [datos, setDatos] = useState<Extraccion | null>(null);
   const [demo, setDemo] = useState(false);
-  const [servidor, setServidor] = useState<EstadoServidor>({
-    serverKey: false,
-    modelos: [MODELO_DEFECTO],
-    modeloDefecto: MODELO_DEFECTO,
-  });
+  const [serverKey, setServerKey] = useState(false);
   const [ajustes, setAjustes] = useState<AjustesApp>(() => cargarAjustes());
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [analizando, setAnalizando] = useState(false);
@@ -28,11 +19,13 @@ export default function App() {
   useEffect(() => {
     fetch('/api/status')
       .then((r) => r.json())
-      .then((s) => setServidor(s))
+      .then((s) => setServerKey(Boolean(s.serverKey)))
       .catch(() => {});
   }, []);
 
-  const sinCredenciales = !servidor.serverKey && !ajustes.apiKey;
+  const preset = presetDe(ajustes.proveedor);
+  const sinCredenciales = esModoDemo(ajustes, serverKey);
+  const pdfNoAdmitido = archivo?.mediaType === 'application/pdf' && !preset.admitePdf;
 
   const analizar = async () => {
     if (!archivo) return;
@@ -42,11 +35,12 @@ export default function App() {
     try {
       const res = await fetch('/api/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...cabecerasApi(ajustes) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           filename: archivo.nombre,
           mediaType: archivo.mediaType,
           dataBase64: archivo.dataBase64,
+          config: configApi(ajustes),
         }),
       });
       const cuerpo = await res.json().catch(() => null);
@@ -71,7 +65,13 @@ export default function App() {
         </h1>
         <p className="cabecera__lema">De plano a presupuesto en segundos</p>
         <div className="cabecera__derecha">
-          {sinCredenciales && <span className="cabecera__demo">modo demo</span>}
+          {sinCredenciales ? (
+            <span className="cabecera__demo">modo demo</span>
+          ) : (
+            <span className="cabecera__proveedor" title={`Proveedor: ${preset.nombre}`}>
+              {preset.nombre.split(' (')[0]}
+            </span>
+          )}
           <button
             className="btn btn--ajustes"
             title="Ajustes de la API"
@@ -85,8 +85,7 @@ export default function App() {
 
       {ajustesAbiertos && (
         <Ajustes
-          serverKey={servidor.serverKey}
-          modelos={servidor.modelos}
+          serverKey={serverKey}
           onCerrar={(nuevos) => {
             setAjustes(nuevos);
             setAjustesAbiertos(false);
@@ -105,7 +104,17 @@ export default function App() {
             }}
             onError={setError}
           />
-          <button className="btn btn--primario btn--analizar" onClick={analizar} disabled={!archivo || analizando}>
+          {pdfNoAdmitido && (
+            <div className="error">
+              ⚠ {preset.nombre} no admite PDF: sube una imagen del plano o cambia a Anthropic o Google Gemini en ⚙
+              Ajustes.
+            </div>
+          )}
+          <button
+            className="btn btn--primario btn--analizar"
+            onClick={analizar}
+            disabled={!archivo || analizando || pdfNoAdmitido}
+          >
             {analizando ? 'Analizando plano…' : 'Analizar plano'}
           </button>
           {analizando && (
@@ -135,7 +144,10 @@ export default function App() {
                 La app nunca inventa datos: si algo no es legible en el plano, el campo queda vacío y se añade una
                 observación.{' '}
                 {sinCredenciales && (
-                  <>Configura tu clave de API en <strong>⚙ Ajustes</strong> para analizar planos reales.</>
+                  <>
+                    En <strong>⚙ Ajustes</strong> puedes conectar Anthropic, Google Gemini (gratuita), Ollama, LM
+                    Studio, vLLM o cualquier API compatible con OpenAI.
+                  </>
                 )}
               </p>
             </div>

@@ -38,15 +38,25 @@ npm run build
 npm start   # sirve la app compilada en :3001
 ```
 
-### Configurar la API desde la app
+### Configurar la API desde la app (multi-proveedor)
 
-En **⚙ Ajustes** (cabecera) puedes configurar la API sin tocar el servidor:
+En **⚙ Ajustes** (cabecera) eliges el proveedor de IA sin tocar el servidor:
 
-- **Clave de API de Anthropic**: se guarda solo en tu navegador (localStorage) y se envía a tu servidor de Draw2Quote con cada análisis mediante la cabecera `x-draw2quote-key`. Tiene prioridad sobre la variable de entorno del servidor. No la uses en un equipo compartido.
-- **Modelo de análisis**: Opus 4.8 (máxima precisión, por defecto), Sonnet 5 o Haiku 4.5.
-- **Probar conexión**: valida la clave contra la API con una llamada gratuita (`count_tokens`).
+| Proveedor | Tipo | Clave | PDF | Notas |
+|---|---|---|---|---|
+| **Anthropic Claude** | nube | sí | ✅ | Máxima precisión; structured outputs nativos. Por defecto Opus 4.8. |
+| **Google Gemini** | nube (capa gratuita) | sí (gratis en aistudio.google.com) | ✅ | `gemini-2.5-flash` por defecto. |
+| **Ollama** | local | no | ❌ solo imágenes | URL por defecto `http://localhost:11434/v1`. Usa un modelo con visión (`qwen2.5vl`, `llama3.2-vision`...). |
+| **LM Studio** | local | no | ❌ solo imágenes | URL por defecto `http://localhost:1234/v1`. |
+| **vLLM** | local/servidor | opcional | ❌ solo imágenes | URL por defecto `http://localhost:8000/v1`. |
+| **API compatible OpenAI** | cloud personalizado | opcional | ❌ solo imágenes | OpenRouter, Groq, Mistral, DeepSeek, Together... indica la URL base (`.../v1`). |
 
-Sin clave (ni en Ajustes ni `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` en el servidor) la app funciona en **modo demo**: devuelve datos de ejemplo para poder probar la interfaz completa sin credenciales.
+- La configuración (proveedor, URL base, clave, modelo) se guarda solo en tu navegador (localStorage) y viaja a tu servidor de Draw2Quote con cada análisis. No la uses en un equipo compartido.
+- **Probar conexión** valida credenciales y URL contra el proveedor elegido sin gastar tokens.
+- Con Anthropic se usan *structured outputs* nativos; con el resto, el esquema JSON se incrusta en el prompt, se pide modo JSON y la respuesta se **valida con Zod en el servidor** — si el modelo no cumple el esquema, verás un error claro en vez de datos corruptos.
+- Los proveedores compatibles OpenAI solo aceptan imágenes; para PDF usa Anthropic o Gemini (la UI te avisa).
+
+Sin configuración (ni `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` en el servidor) la app funciona en **modo demo**: devuelve datos de ejemplo para poder probar la interfaz completa sin credenciales.
 
 ## Estructura
 

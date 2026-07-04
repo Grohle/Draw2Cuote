@@ -77,6 +77,16 @@ body {
   font-size: 0.9rem;
 }
 
+.cabecera__proveedor {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ok);
+  border: 1px solid var(--ok);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+}
+
 /* Modal de ajustes */
 .modal-fondo {
   position: fixed;
