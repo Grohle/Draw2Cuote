@@ -1,0 +1,23 @@
+{
+  "name": "draw2quote",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Draw2Quote — de plano (PDF/imagen) a datos de presupuesto estructurados con IA",
+  "scripts": {
+    "dev": "concurrently -k -n server,web \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "node server/index.js",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "start": "cross-env NODE_ENV=production node server/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest",
+    "express": "^4.21.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.3"
+  }
+}
