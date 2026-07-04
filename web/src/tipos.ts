@@ -14,20 +14,27 @@ export type FamiliaMaterial =
   | 'galvanizado'
   | 'otro';
 
+export type TipoPieza = 'chapa_plegada' | 'torneado' | 'fresado' | 'tubo_perfil' | 'otro';
+
 export interface Extraccion {
+  tipo_pieza: Campo<TipoPieza>;
   numero_plano: Campo<string>;
   denominacion: Campo<string>;
   revision: Campo<string>;
   largo_mm: Campo<number>;
   ancho_mm: Campo<number>;
+  alto_mm: Campo<number>;
+  diametro_max_mm: Campo<number>;
   espesor_mm: Campo<number>;
   material_familia: Campo<FamiliaMaterial>;
   material_calidad: Campo<string>;
   acabado: Campo<string>;
   cantidad: Campo<number>;
   tolerancia_general: Campo<string>;
+  tolerancias_criticas: Campo<string>;
   num_pliegues: Campo<number>;
   num_agujeros: Campo<number>;
+  roscas: Campo<string>;
   observaciones: string[];
 }
 

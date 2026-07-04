@@ -11,6 +11,10 @@
 3. **Revisa y corrige**: cada campo muestra un chip de confianza (alta / media / baja). Las lecturas dudosas y las incoherencias (espesor no comercial, calidad que no cuadra con la familia de material, cantidad ausente…) quedan marcadas con avisos.
 4. **Exporta el JSON** estructurado para alimentar tu sistema de presupuestos.
 
+### Campos adaptados al tipo de pieza
+
+La IA detecta primero el **tipo de pieza** — chapa plegada, torneado, fresado o tubo/perfil — y la UI adapta los campos: una pieza torneada muestra longitud y Ø máximo (sin espesor ni pliegues), la chapa muestra espesor y pliegues, el fresado añade el alto y el tubo pide espesor de pared. Las validaciones también cambian según el tipo. El tipo es editable y el formulario se reconfigura al cambiarlo.
+
 ### Diseñado para evitar lecturas raras
 
 - El modelo tiene prohibido inventar: si un dato no es legible devuelve `null` y lo explica en *Observaciones*.

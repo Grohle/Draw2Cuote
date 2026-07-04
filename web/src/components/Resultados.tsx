@@ -1,6 +1,15 @@
 import { useMemo } from 'react';
-import { ACABADOS, AYUDAS, CALIDADES, ESPESORES_ESTANDAR, FAMILIAS, TOLERANCIAS } from '../catalogo';
-import type { Aviso, Extraccion, FamiliaMaterial } from '../tipos';
+import {
+  ACABADOS,
+  AYUDAS,
+  CALIDADES,
+  campoAplica,
+  ESPESORES_ESTANDAR,
+  FAMILIAS,
+  TIPOS_PIEZA,
+  TOLERANCIAS,
+} from '../catalogo';
+import type { Aviso, Extraccion, FamiliaMaterial, TipoPieza } from '../tipos';
 import { validar } from '../validaciones';
 import { Campo } from './Campo';
 
@@ -73,6 +82,9 @@ export function Resultados({ datos, onCambio, demo }: Props) {
   const familia = datos.material_familia;
   const calidadesSugeridas = familia.valor ? CALIDADES[familia.valor] : Object.values(CALIDADES).flat();
 
+  const tipo = datos.tipo_pieza.valor;
+  const aplica = (clave: ClaveCampo) => campoAplica(clave, tipo);
+
   const exportar = () => {
     const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -99,6 +111,34 @@ export function Resultados({ datos, onCambio, demo }: Props) {
       <fieldset className="grupo">
         <legend>Identificación</legend>
         <div className="grupo__campos">
+          <Campo
+            etiqueta="Tipo de pieza"
+            ayuda={AYUDAS.tipo_pieza}
+            confianza={datos.tipo_pieza.confianza}
+            editado={datos.tipo_pieza.editado}
+            avisos={avisosDe('tipo_pieza')}
+          >
+            <select
+              value={tipo ?? ''}
+              onChange={(e) =>
+                onCambio({
+                  ...datos,
+                  tipo_pieza: {
+                    valor: (e.target.value || null) as TipoPieza | null,
+                    confianza: datos.tipo_pieza.confianza,
+                    editado: true,
+                  },
+                })
+              }
+            >
+              <option value="">—</option>
+              {TIPOS_PIEZA.map((t) => (
+                <option key={t.valor} value={t.valor}>
+                  {t.etiqueta}
+                </option>
+              ))}
+            </select>
+          </Campo>
           {campoTexto('numero_plano', 'Nº de plano')}
           {campoTexto('denominacion', 'Denominación')}
           {campoTexto('revision', 'Revisión')}
@@ -108,10 +148,14 @@ export function Resultados({ datos, onCambio, demo }: Props) {
       <fieldset className="grupo">
         <legend>Geometría</legend>
         <div className="grupo__campos">
-          {campoNumero('largo_mm', 'Largo', 'mm')}
-          {campoNumero('ancho_mm', 'Ancho', 'mm')}
-          {campoNumero('espesor_mm', 'Espesor', 'mm', ESPESORES_ESTANDAR)}
+          {campoNumero('largo_mm', tipo === 'torneado' || tipo === 'tubo_perfil' ? 'Longitud' : 'Largo', 'mm')}
+          {aplica('ancho_mm') && campoNumero('ancho_mm', 'Ancho', 'mm')}
+          {aplica('alto_mm') && campoNumero('alto_mm', 'Alto', 'mm')}
+          {aplica('diametro_max_mm') && campoNumero('diametro_max_mm', 'Ø máximo', 'mm')}
+          {aplica('espesor_mm') &&
+            campoNumero('espesor_mm', tipo === 'tubo_perfil' ? 'Espesor pared' : 'Espesor', 'mm', ESPESORES_ESTANDAR)}
           {campoTexto('tolerancia_general', 'Tolerancia general', TOLERANCIAS)}
+          {campoTexto('tolerancias_criticas', 'Tolerancias críticas')}
         </div>
       </fieldset>
 
@@ -155,8 +199,9 @@ export function Resultados({ datos, onCambio, demo }: Props) {
         <legend>Fabricación</legend>
         <div className="grupo__campos">
           {campoNumero('cantidad', 'Cantidad', 'uds')}
-          {campoNumero('num_pliegues', 'Pliegues')}
+          {aplica('num_pliegues') && campoNumero('num_pliegues', 'Pliegues')}
           {campoNumero('num_agujeros', 'Agujeros')}
+          {campoTexto('roscas', 'Roscas')}
         </div>
       </fieldset>
 
