@@ -3,7 +3,13 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
-import { extraerDatosPlano, modoDemo } from './extract.js';
+import {
+  extraerDatosPlano,
+  hayClaveServidor,
+  MODELO_DEFECTO,
+  MODELOS_PERMITIDOS,
+  probarClave,
+} from './extract.js';
 
 const PORT = process.env.PORT || 3001;
 const MAX_BYTES = 32 * 1024 * 1024; // límite de la API para PDF
@@ -19,11 +25,37 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 
 app.get('/api/status', (_req, res) => {
-  res.json({ demo: modoDemo() });
+  res.json({
+    serverKey: hayClaveServidor(),
+    modelos: MODELOS_PERMITIDOS,
+    modeloDefecto: MODELO_DEFECTO,
+  });
+});
+
+// Valida la clave del panel de ajustes (o las credenciales del servidor si no llega ninguna)
+app.post('/api/test-key', async (req, res) => {
+  const apiKey = req.get('x-draw2quote-key') || undefined;
+  if (!apiKey && !hayClaveServidor()) {
+    return res.status(400).json({ error: 'No hay ninguna clave que probar: introduce una en Ajustes.' });
+  }
+  try {
+    await probarClave(apiKey);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err instanceof Anthropic.AuthenticationError) {
+      return res.status(401).json({ error: 'Clave inválida o revocada.' });
+    }
+    if (err instanceof Anthropic.APIConnectionError) {
+      return res.status(503).json({ error: 'No se pudo conectar con la API de Claude.' });
+    }
+    res.status(502).json({ error: err.message || 'Error probando la clave.' });
+  }
 });
 
 app.post('/api/extract', async (req, res) => {
   const { mediaType, dataBase64 } = req.body ?? {};
+  const apiKey = req.get('x-draw2quote-key') || undefined;
+  const model = req.get('x-draw2quote-model') || undefined;
 
   if (!mediaType || !dataBase64) {
     return res.status(400).json({ error: 'Faltan mediaType o dataBase64 en la petición.' });
@@ -37,11 +69,11 @@ app.post('/api/extract', async (req, res) => {
   }
 
   try {
-    const resultado = await extraerDatosPlano({ mediaType, dataBase64 });
+    const resultado = await extraerDatosPlano({ mediaType, dataBase64, apiKey, model });
     res.json(resultado);
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
-      return res.status(401).json({ error: 'Credenciales de la API inválidas. Revisa ANTHROPIC_API_KEY.' });
+      return res.status(401).json({ error: 'Credenciales de la API inválidas. Revisa la clave en Ajustes (o ANTHROPIC_API_KEY en el servidor).' });
     }
     if (err instanceof Anthropic.RateLimitError) {
       return res.status(429).json({ error: 'Límite de peticiones alcanzado. Espera unos segundos y reintenta.' });
@@ -69,5 +101,7 @@ if (fs.existsSync(dist)) {
 }
 
 app.listen(PORT, () => {
-  console.log(`Draw2Quote server escuchando en http://localhost:${PORT}${modoDemo() ? ' (MODO DEMO: sin credenciales de API)' : ''}`);
+  console.log(
+    `Draw2Quote server escuchando en http://localhost:${PORT}${hayClaveServidor() ? '' : ' (sin clave en el servidor: usa Ajustes en la UI o modo demo)'}`
+  );
 });

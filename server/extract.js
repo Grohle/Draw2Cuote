@@ -2,7 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
 
-const MODEL = 'claude-opus-4-8';
+export const MODELOS_PERMITIDOS = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
+export const MODELO_DEFECTO = 'claude-opus-4-8';
 
 const confianza = z
   .enum(['alta', 'media', 'baja'])
@@ -93,19 +94,31 @@ function bloqueDocumento(mediaType, dataBase64) {
   };
 }
 
-export function modoDemo() {
-  if (process.env.DRAW2QUOTE_FORCE_API === '1') return false;
-  return !process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN;
+export function hayClaveServidor() {
+  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 }
 
-export async function extraerDatosPlano({ mediaType, dataBase64 }) {
-  if (modoDemo()) {
+function crearCliente(apiKey) {
+  return apiKey ? new Anthropic({ apiKey }) : new Anthropic();
+}
+
+/** Valida unas credenciales con una llamada gratuita a count_tokens. */
+export async function probarClave(apiKey) {
+  const client = crearCliente(apiKey);
+  await client.messages.countTokens({
+    model: MODELO_DEFECTO,
+    messages: [{ role: 'user', content: 'ping' }],
+  });
+}
+
+export async function extraerDatosPlano({ mediaType, dataBase64, apiKey, model }) {
+  if (!apiKey && !hayClaveServidor()) {
     return { demo: true, datos: DATOS_DEMO };
   }
 
-  const client = new Anthropic();
+  const client = crearCliente(apiKey);
   const response = await client.messages.parse({
-    model: MODEL,
+    model: MODELOS_PERMITIDOS.includes(model) ? model : MODELO_DEFECTO,
     max_tokens: 16000,
     thinking: { type: 'adaptive' },
     system: SYSTEM,
