@@ -1,22 +1,38 @@
 import { useEffect, useState } from 'react';
+import { cabecerasApi, cargarAjustes, MODELO_DEFECTO, type AjustesApp } from './ajustes';
+import { Ajustes } from './components/Ajustes';
 import { Dropzone, type ArchivoPlano } from './components/Dropzone';
 import { Resultados } from './components/Resultados';
 import type { Extraccion, RespuestaExtraccion } from './tipos';
+
+interface EstadoServidor {
+  serverKey: boolean;
+  modelos: string[];
+  modeloDefecto: string;
+}
 
 export default function App() {
   const [archivo, setArchivo] = useState<ArchivoPlano | null>(null);
   const [datos, setDatos] = useState<Extraccion | null>(null);
   const [demo, setDemo] = useState(false);
-  const [demoServidor, setDemoServidor] = useState(false);
+  const [servidor, setServidor] = useState<EstadoServidor>({
+    serverKey: false,
+    modelos: [MODELO_DEFECTO],
+    modeloDefecto: MODELO_DEFECTO,
+  });
+  const [ajustes, setAjustes] = useState<AjustesApp>(() => cargarAjustes());
+  const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [analizando, setAnalizando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/status')
       .then((r) => r.json())
-      .then((s) => setDemoServidor(Boolean(s.demo)))
+      .then((s) => setServidor(s))
       .catch(() => {});
   }, []);
+
+  const sinCredenciales = !servidor.serverKey && !ajustes.apiKey;
 
   const analizar = async () => {
     if (!archivo) return;
@@ -26,7 +42,7 @@ export default function App() {
     try {
       const res = await fetch('/api/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...cabecerasApi(ajustes) },
         body: JSON.stringify({
           filename: archivo.nombre,
           mediaType: archivo.mediaType,
@@ -54,8 +70,29 @@ export default function App() {
           Draw2<span>Quote</span>
         </h1>
         <p className="cabecera__lema">De plano a presupuesto en segundos</p>
-        {demoServidor && <span className="cabecera__demo">modo demo</span>}
+        <div className="cabecera__derecha">
+          {sinCredenciales && <span className="cabecera__demo">modo demo</span>}
+          <button
+            className="btn btn--ajustes"
+            title="Ajustes de la API"
+            aria-label="Ajustes de la API"
+            onClick={() => setAjustesAbiertos(true)}
+          >
+            ⚙ Ajustes
+          </button>
+        </div>
       </header>
+
+      {ajustesAbiertos && (
+        <Ajustes
+          serverKey={servidor.serverKey}
+          modelos={servidor.modelos}
+          onCerrar={(nuevos) => {
+            setAjustes(nuevos);
+            setAjustesAbiertos(false);
+          }}
+        />
+      )}
 
       <main className="contenido">
         <div className="columna columna--plano">
@@ -96,7 +133,10 @@ export default function App() {
               </ol>
               <p className="vacio__nota">
                 La app nunca inventa datos: si algo no es legible en el plano, el campo queda vacío y se añade una
-                observación.
+                observación.{' '}
+                {sinCredenciales && (
+                  <>Configura tu clave de API en <strong>⚙ Ajustes</strong> para analizar planos reales.</>
+                )}
               </p>
             </div>
           )}

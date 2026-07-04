@@ -38,7 +38,15 @@ npm run build
 npm start   # sirve la app compilada en :3001
 ```
 
-Sin `ANTHROPIC_API_KEY` (ni `ANTHROPIC_AUTH_TOKEN`) el servidor arranca en **modo demo**: devuelve datos de ejemplo para poder probar la interfaz completa sin credenciales.
+### Configurar la API desde la app
+
+En **⚙ Ajustes** (cabecera) puedes configurar la API sin tocar el servidor:
+
+- **Clave de API de Anthropic**: se guarda solo en tu navegador (localStorage) y se envía a tu servidor de Draw2Quote con cada análisis mediante la cabecera `x-draw2quote-key`. Tiene prioridad sobre la variable de entorno del servidor. No la uses en un equipo compartido.
+- **Modelo de análisis**: Opus 4.8 (máxima precisión, por defecto), Sonnet 5 o Haiku 4.5.
+- **Probar conexión**: valida la clave contra la API con una llamada gratuita (`count_tokens`).
+
+Sin clave (ni en Ajustes ni `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` en el servidor) la app funciona en **modo demo**: devuelve datos de ejemplo para poder probar la interfaz completa sin credenciales.
 
 ## Estructura
 

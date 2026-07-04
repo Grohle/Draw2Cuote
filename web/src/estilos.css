@@ -55,8 +55,14 @@ body {
   color: var(--texto-suave);
 }
 
-.cabecera__demo {
+.cabecera__derecha {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cabecera__demo {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -64,6 +70,98 @@ body {
   border: 1px solid var(--aviso);
   border-radius: 999px;
   padding: 0.15rem 0.6rem;
+}
+
+.btn--ajustes {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+}
+
+/* Modal de ajustes */
+.modal-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 12, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+}
+
+.modal__label {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  margin-top: 0.5rem;
+}
+
+.modal input,
+.modal select {
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  border-radius: 6px;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+.modal input:focus,
+.modal select:focus {
+  outline: none;
+  border-color: var(--acento);
+}
+
+.modal__fila-clave {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.modal__fila-clave input {
+  flex: 1;
+}
+
+.modal__nota {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  line-height: 1.45;
+}
+
+.modal__prueba {
+  margin: 0.5rem 0 0;
+  font-size: 0.88rem;
+}
+
+.modal__prueba--ok {
+  color: var(--ok);
+}
+
+.modal__prueba--error {
+  color: var(--peligro);
+}
+
+.modal__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
 }
 
 /* Layout */
