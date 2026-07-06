@@ -271,6 +271,121 @@ body {
   opacity: 0.7;
 }
 
+.feedback-imagen {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  margin-top: 0.3rem;
+  cursor: pointer;
+}
+
+/* Presupuesto */
+.presupuesto__incompleto {
+  color: var(--aviso);
+  margin: 0;
+}
+
+.presupuesto__lineas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.6rem;
+}
+
+.presupuesto__linea {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+
+.presupuesto__total {
+  display: flex;
+  gap: 1.5rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.presupuesto__total > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.presupuesto__total span {
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.presupuesto__total strong {
+  font-size: 1.15rem;
+  color: var(--acento);
+}
+
+.presupuesto__aviso {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  margin: 0.2rem 0;
+}
+
+.presupuesto__nota {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  margin-top: 0.6rem;
+}
+
+.enlace {
+  background: none;
+  border: none;
+  color: var(--acento);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+
+/* Panel de tarifas */
+.tarifa-seccion {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--acento);
+  margin: 1rem 0 0.4rem;
+}
+
+.tarifa-grupo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.7rem;
+}
+
+.tarifa-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+}
+
+.tarifa-campo input {
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  border-radius: 6px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.9rem;
+}
+
+.tarifa-campo input:focus {
+  outline: none;
+  border-color: var(--acento);
+}
+
 /* Layout */
 .contenido {
   display: grid;

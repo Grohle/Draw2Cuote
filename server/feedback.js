@@ -35,8 +35,13 @@ function calcularCamposCorregidos(original, final) {
   return CAMPOS.filter((campo) => JSON.stringify(valorDe(original, campo)) !== JSON.stringify(valorDe(final, campo)));
 }
 
-/** Registra un evento de feedback (corrección humana) tras revisar una extracción. */
-export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveedor, modelo }) {
+/**
+ * Registra un evento de feedback (corrección humana) tras revisar una extracción.
+ * `imagen` es opcional (el usuario decide si incluirla) — solo con imagen el
+ * evento sirve para un futuro fine-tuning multimodal real; sin ella, solo
+ * alimenta las lecciones aprendidas en contexto y la calibración.
+ */
+export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveedor, modelo, imagen }) {
   if (!existsSync(DIR_DATOS)) mkdirSync(DIR_DATOS, { recursive: true });
   const camposCorregidos = calcularCamposCorregidos(extraccionOriginal, extraccionFinal);
   const evento = {
@@ -47,6 +52,7 @@ export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveed
     extraccion_original: extraccionOriginal,
     extraccion_final: extraccionFinal,
     campos_corregidos: camposCorregidos,
+    imagen: imagen && imagen.mediaType && imagen.dataBase64 ? { mediaType: imagen.mediaType, dataBase64: imagen.dataBase64 } : null,
   };
   appendFileSync(ARCHIVO_FEEDBACK, JSON.stringify(evento) + '\n', 'utf8');
   return { id: evento.id, camposCorregidos };
