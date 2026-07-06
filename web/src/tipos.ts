@@ -47,3 +47,16 @@ export interface Aviso {
   campo: keyof Extraccion | 'general';
   mensaje: string;
 }
+
+export interface EstadisticaCampo {
+  campo: string;
+  vecesVisto: number;
+  vecesCorregido: number;
+  tasaCorreccion: number;
+  porConfianza: Record<Confianza, { visto: number; corregido: number }>;
+}
+
+export interface Estadisticas {
+  totalAnalisisConFeedback: number;
+  campos: EstadisticaCampo[];
+}

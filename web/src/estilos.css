@@ -174,6 +174,103 @@ body {
   margin-top: 1rem;
 }
 
+.modal--ancho {
+  width: min(760px, 100%);
+}
+
+/* Panel de precisión / calibración */
+.tabla-calibracion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  margin: 0.5rem 0;
+}
+
+.tabla-calibracion__cabecera,
+.tabla-calibracion__fila {
+  display: grid;
+  grid-template-columns: 1.4fr 1.6fr 0.8fr 0.8fr 0.8fr;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.35rem 0.4rem;
+}
+
+.tabla-calibracion__cabecera {
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+.tabla-calibracion__fila {
+  border-radius: 6px;
+  background: var(--panel-2);
+}
+
+.tabla-calibracion__tasa {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.barra {
+  height: 6px;
+  border-radius: 999px;
+  min-width: 2px;
+  max-width: 60px;
+}
+
+.barra--alta {
+  background: var(--ok);
+}
+
+.barra--media {
+  background: var(--aviso);
+}
+
+.barra--baja {
+  background: var(--peligro);
+}
+
+/* Feedback / botón de aprendizaje */
+.acciones--feedback {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.acciones__feedback-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.feedback-mensaje {
+  font-size: 0.85rem;
+}
+
+.feedback-mensaje--ok {
+  color: var(--ok);
+}
+
+.feedback-mensaje--error {
+  color: var(--peligro);
+}
+
+.btn--aprender {
+  border-color: #7dd3fc;
+  color: #7dd3fc;
+}
+
+.btn--aprender:hover:not(:disabled) {
+  background: rgba(125, 211, 252, 0.1);
+}
+
+.btn--aprender:disabled {
+  opacity: 0.7;
+}
+
 /* Layout */
 .contenido {
   display: grid;

@@ -13,15 +13,20 @@ import type { Aviso, Extraccion, FamiliaMaterial, TipoPieza } from '../tipos';
 import { validar } from '../validaciones';
 import { Campo } from './Campo';
 
+export type EstadoFeedback = 'inactivo' | 'guardando' | 'guardado' | 'error';
+
 interface Props {
   datos: Extraccion;
   onCambio: (datos: Extraccion) => void;
   demo: boolean;
+  onGuardarFeedback: () => void;
+  estadoFeedback: EstadoFeedback;
+  mensajeFeedback: string | null;
 }
 
 type ClaveCampo = Exclude<keyof Extraccion, 'observaciones'>;
 
-export function Resultados({ datos, onCambio, demo }: Props) {
+export function Resultados({ datos, onCambio, demo, onGuardarFeedback, estadoFeedback, mensajeFeedback }: Props) {
   const avisos = useMemo(() => validar(datos), [datos]);
   const avisosDe = (campo: keyof Extraccion) => avisos.filter((a) => a.campo === campo).map((a) => a.mensaje);
 
@@ -215,6 +220,21 @@ export function Resultados({ datos, onCambio, demo }: Props) {
           </ul>
         </fieldset>
       )}
+
+      <div className="acciones acciones--feedback">
+        <div className="acciones__feedback-info">
+          {estadoFeedback === 'guardado' && <span className="feedback-mensaje feedback-mensaje--ok">✓ {mensajeFeedback}</span>}
+          {estadoFeedback === 'error' && <span className="feedback-mensaje feedback-mensaje--error">⚠ {mensajeFeedback}</span>}
+        </div>
+        <button
+          className="btn btn--aprender"
+          onClick={onGuardarFeedback}
+          disabled={estadoFeedback === 'guardando' || estadoFeedback === 'guardado'}
+          title="Confirma o corrige antes de guardar: esto ayuda a calibrar y mejorar el modelo con el uso real"
+        >
+          {estadoFeedback === 'guardando' ? 'Guardando…' : estadoFeedback === 'guardado' ? '✓ Guardado' : '🧠 Guardar corrección'}
+        </button>
+      </div>
 
       <div className="acciones">
         <button className="btn" onClick={copiar}>

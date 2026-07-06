@@ -15,6 +15,17 @@
 
 La IA detecta primero el **tipo de pieza** — chapa plegada, torneado, fresado o tubo/perfil — y la UI adapta los campos: una pieza torneada muestra longitud y Ø máximo (sin espesor ni pliegues), la chapa muestra espesor y pliegues, el fresado añade el alto y el tubo pide espesor de pared. Las validaciones también cambian según el tipo. El tipo es editable y el formulario se reconfigura al cambiarlo.
 
+### Aprendizaje continuo con el uso (ML aplicado)
+
+Draw2Quote no se queda quieto tras el primer prompt: cada corrección que un usuario confirma con **🧠 Guardar corrección** se convierte en una señal de entrenamiento que retroalimenta al sistema. El mecanismo, sin necesidad de reentrenar ningún modelo:
+
+1. **Captura de feedback.** Al pulsar "Guardar corrección" se envían la extracción original del modelo y la extracción final (tras la revisión humana) a `POST /api/feedback`. El servidor calcula qué campos se corrigieron y guarda el evento en `server/datos/feedback.jsonl` (JSONL local, ignorado por git). Guardar sin haber corregido nada también es señal útil: confirma que la confianza alta era correcta.
+2. **Aprendizaje en contexto (retrieval-augmented, sin tocar pesos).** Antes de cada análisis nuevo, el servidor destila el histórico de correcciones en un bloque de "lecciones aprendidas" (campos que se corrigen con frecuencia, transiciones `null → valor` habituales, valores de calidad/acabado más frecuentes por familia de material) y lo inyecta en el prompt de sistema de la siguiente llamada al modelo — cualquiera que sea el proveedor. Es el mismo principio que usan los copilots en producción para adaptarse sin fine-tuning: el modelo no cambia, pero el contexto que recibe sí, y eso mueve la precisión medible con el uso real.
+3. **Calibración real.** El panel **📊 Precisión** (`GET /api/estadisticas`) muestra, por campo, qué porcentaje de las veces que el modelo marcó "confianza alta" tuvo que corregirse después — evaluación de modelos de verdad, no solo un contador de uso.
+4. **Camino a fine-tuning real (opcional, no automatizado).** `server/datos/feedback.jsonl` ya tiene la forma de un dataset supervisado (predicción del modelo + corrección humana); es el punto de partida directo para exportar un job de fine-tuning o de LoRA sobre un modelo local, sin necesidad de instrumentación adicional.
+
+Las lecciones se activan solo con datos suficientes (mínimo 5 análisis con feedback) para no sacar conclusiones prematuras con poca muestra.
+
 ### Diseñado para evitar lecturas raras
 
 - El modelo tiene prohibido inventar: si un dato no es legible devuelve `null` y lo explica en *Observaciones*.

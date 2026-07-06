@@ -3,7 +3,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
-import { extraerDatosPlano, hayClaveServidor, probarProveedor } from './extract.js';
+import { EsquemaExtraccion, extraerDatosPlano, hayClaveServidor, probarProveedor } from './extract.js';
+import { calcularEstadisticas, registrarFeedback } from './feedback.js';
 
 const PORT = process.env.PORT || 3001;
 const MAX_BYTES = 32 * 1024 * 1024; // límite de la API para PDF
@@ -76,6 +77,38 @@ app.post('/api/extract', async (req, res) => {
     const status = err.status && Number.isInteger(err.status) ? err.status : 500;
     console.error('[extract]', err);
     res.status(status).json({ error: err.message || 'Error inesperado analizando el plano.' });
+  }
+});
+
+// Bucle de aprendizaje: el usuario confirma o corrige una extracción ya revisada.
+app.post('/api/feedback', (req, res) => {
+  const { extraccionOriginal, extraccionFinal, proveedor, modelo } = req.body ?? {};
+  const original = EsquemaExtraccion.safeParse(extraccionOriginal);
+  const final = EsquemaExtraccion.safeParse(extraccionFinal);
+  if (!original.success || !final.success) {
+    return res.status(400).json({ error: 'La extracción enviada no tiene el formato esperado.' });
+  }
+  try {
+    const { camposCorregidos } = registrarFeedback({
+      extraccionOriginal: original.data,
+      extraccionFinal: final.data,
+      proveedor,
+      modelo,
+    });
+    res.json({ ok: true, camposCorregidos });
+  } catch (err) {
+    console.error('[feedback]', err);
+    res.status(500).json({ error: 'No se pudo guardar el feedback.' });
+  }
+});
+
+// Estadísticas de calibración: qué % de cada campo se ha corregido, agrupado por confianza.
+app.get('/api/estadisticas', (_req, res) => {
+  try {
+    res.json(calcularEstadisticas());
+  } catch (err) {
+    console.error('[estadisticas]', err);
+    res.status(500).json({ error: 'No se pudieron calcular las estadísticas.' });
   }
 });
 
