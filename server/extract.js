@@ -15,7 +15,7 @@ export { EsquemaExtraccion };
 export const MODELOS_ANTHROPIC = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
 export const MODELO_DEFECTO = 'claude-opus-4-8';
 
-const SYSTEM = `Eres un técnico de oficina técnica especializado en fabricación de chapa y calderería.
+export const SYSTEM = `Eres un técnico de oficina técnica especializado en fabricación de chapa y calderería.
 Tu tarea es leer un plano técnico (PDF o imagen) y extraer los datos necesarios para presupuestar la pieza.
 
 Primero identifica el TIPO DE PIEZA (chapa plegada, torneado, fresado, tubo/perfil) a partir de las vistas, secciones y símbolos del plano. Del tipo depende qué campos aplican:

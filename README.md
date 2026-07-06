@@ -22,11 +22,25 @@ Draw2Quote no se queda quieto tras el primer prompt: cada corrección que un usu
 1. **Captura de feedback.** Al pulsar "Guardar corrección" se envían la extracción original del modelo y la extracción final (tras la revisión humana) a `POST /api/feedback`. El servidor calcula qué campos se corrigieron y guarda el evento en `server/datos/feedback.jsonl` (JSONL local, ignorado por git). Guardar sin haber corregido nada también es señal útil: confirma que la confianza alta era correcta.
 2. **Aprendizaje en contexto (retrieval-augmented, sin tocar pesos).** Antes de cada análisis nuevo, el servidor destila el histórico de correcciones en un bloque de "lecciones aprendidas" (campos que se corrigen con frecuencia, transiciones `null → valor` habituales, valores de calidad/acabado más frecuentes por familia de material) y lo inyecta en el prompt de sistema de la siguiente llamada al modelo — cualquiera que sea el proveedor. Es el mismo principio que usan los copilots en producción para adaptarse sin fine-tuning: el modelo no cambia, pero el contexto que recibe sí, y eso mueve la precisión medible con el uso real.
 3. **Calibración real.** El panel **📊 Precisión** (`GET /api/estadisticas`) muestra, por campo, qué porcentaje de las veces que el modelo marcó "confianza alta" tuvo que corregirse después — evaluación de modelos de verdad, no solo un contador de uso.
-4. **Camino a fine-tuning real (opcional, no automatizado).** `server/datos/feedback.jsonl` ya tiene la forma de un dataset supervisado (predicción del modelo + corrección humana); es el punto de partida directo para exportar un job de fine-tuning o de LoRA sobre un modelo local, sin necesidad de instrumentación adicional.
+4. **Export a fine-tuning real.** Al guardar una corrección puedes marcar "Incluir imagen del plano en el dataset de mejora" (desmarcado por defecto, ya que un plano puede contener información sensible del cliente). Con:
+
+   ```bash
+   npm run feedback:exportar
+   ```
+
+   se convierte `server/datos/feedback.jsonl` en `server/datos/finetuning.jsonl`: un JSONL de mensajes `system` / `user` (imagen + instrucción, o una nota si no se incluyó imagen) / `assistant` (la extracción corregida por el humano) — el formato de partida para un job de fine-tuning o un entrenador LoRA local. Los eventos sin imagen quedan marcados como útiles solo para ajustar criterio textual, no visión.
 
 Las lecciones se activan solo con datos suficientes (mínimo 5 análisis con feedback) para no sacar conclusiones prematuras con poca muestra.
 
-### Diseñado para evitar lecturas raras
+### Presupuesto estimado configurable
+
+Cada análisis incluye un desglose de **💰 Presupuesto estimado** calculado en el navegador a partir de los datos extraídos: material (peso × precio/kg según densidad real del material), corte o mecanizado, agujeros, pliegues/roscas, acabado, recargo por tolerancias críticas y preparación por lote — con precio unitario y total del lote.
+
+- Usa geometría simplificada (rectángulo/cilindro envolvente, no el perfil real de la pieza): es una estimación de orden de magnitud, no un presupuesto de nesting real. Cada aproximación usada queda anotada explícitamente bajo el desglose.
+- Si falta un dato imprescindible para calcular (p. ej. cantidad o espesor), se indica claramente qué falta en vez de asumir un valor.
+- Todas las tarifas (€/kg por familia de material, €/m de corte, €/min de mecanizado, coste por agujero/pliegue/rosca, acabado, preparación, recargos y margen) son **editables en ⚙ 💶 Tarifas** y se guardan en tu navegador — ajústalas a los costes reales de tu taller.
+
+### Aprendizaje continuo con el uso (ML aplicado)
 
 - El modelo tiene prohibido inventar: si un dato no es legible devuelve `null` y lo explica en *Observaciones*.
 - Todas las dimensiones se normalizan a milímetros.

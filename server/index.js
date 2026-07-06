@@ -82,7 +82,7 @@ app.post('/api/extract', async (req, res) => {
 
 // Bucle de aprendizaje: el usuario confirma o corrige una extracción ya revisada.
 app.post('/api/feedback', (req, res) => {
-  const { extraccionOriginal, extraccionFinal, proveedor, modelo } = req.body ?? {};
+  const { extraccionOriginal, extraccionFinal, proveedor, modelo, imagen } = req.body ?? {};
   const original = EsquemaExtraccion.safeParse(extraccionOriginal);
   const final = EsquemaExtraccion.safeParse(extraccionFinal);
   if (!original.success || !final.success) {
@@ -94,6 +94,7 @@ app.post('/api/feedback', (req, res) => {
       extraccionFinal: final.data,
       proveedor,
       modelo,
+      imagen,
     });
     res.json({ ok: true, camposCorregidos });
   } catch (err) {

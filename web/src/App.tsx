@@ -4,7 +4,9 @@ import { Ajustes } from './components/Ajustes';
 import { Calibracion } from './components/Calibracion';
 import { Dropzone, type ArchivoPlano } from './components/Dropzone';
 import { type EstadoFeedback, Resultados } from './components/Resultados';
+import { Tarifas as ModalTarifas } from './components/Tarifas';
 import { presetDe } from './proveedores';
+import { cargarTarifas, type Tarifas } from './tarifas';
 import type { Extraccion, RespuestaExtraccion } from './tipos';
 
 export default function App() {
@@ -14,12 +16,15 @@ export default function App() {
   const [demo, setDemo] = useState(false);
   const [serverKey, setServerKey] = useState(false);
   const [ajustes, setAjustes] = useState<AjustesApp>(() => cargarAjustes());
+  const [tarifas, setTarifas] = useState<Tarifas>(() => cargarTarifas());
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [calibracionAbierta, setCalibracionAbierta] = useState(false);
+  const [tarifasAbiertas, setTarifasAbiertas] = useState(false);
   const [analizando, setAnalizando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estadoFeedback, setEstadoFeedback] = useState<EstadoFeedback>('inactivo');
   const [mensajeFeedback, setMensajeFeedback] = useState<string | null>(null);
+  const [incluirImagenFeedback, setIncluirImagenFeedback] = useState(false);
 
   useEffect(() => {
     fetch('/api/status')
@@ -40,6 +45,7 @@ export default function App() {
     setDatosOriginales(null);
     setEstadoFeedback('inactivo');
     setMensajeFeedback(null);
+    setIncluirImagenFeedback(false);
     try {
       const res = await fetch('/api/extract', {
         method: 'POST',
@@ -88,6 +94,7 @@ export default function App() {
           extraccionFinal: datos,
           proveedor: ajustes.proveedor,
           modelo: ajustes.modelo || preset.modeloDefecto,
+          imagen: incluirImagenFeedback && archivo ? { mediaType: archivo.mediaType, dataBase64: archivo.dataBase64 } : undefined,
         }),
       });
       const cuerpo = await res.json().catch(() => null);
@@ -124,6 +131,14 @@ export default function App() {
           )}
           <button
             className="btn btn--ajustes"
+            title="Tarifas de presupuesto"
+            aria-label="Tarifas de presupuesto"
+            onClick={() => setTarifasAbiertas(true)}
+          >
+            💶 Tarifas
+          </button>
+          <button
+            className="btn btn--ajustes"
             title="Precisión del modelo"
             aria-label="Precisión del modelo"
             onClick={() => setCalibracionAbierta(true)}
@@ -151,6 +166,14 @@ export default function App() {
         />
       )}
       {calibracionAbierta && <Calibracion onCerrar={() => setCalibracionAbierta(false)} />}
+      {tarifasAbiertas && (
+        <ModalTarifas
+          onCerrar={(nuevas) => {
+            setTarifas(nuevas);
+            setTarifasAbiertas(false);
+          }}
+        />
+      )}
 
       <main className="contenido">
         <div className="columna columna--plano">
@@ -194,6 +217,10 @@ export default function App() {
               onGuardarFeedback={guardarFeedback}
               estadoFeedback={estadoFeedback}
               mensajeFeedback={mensajeFeedback}
+              incluirImagenFeedback={incluirImagenFeedback}
+              onCambiarIncluirImagen={setIncluirImagenFeedback}
+              tarifas={tarifas}
+              onAbrirTarifas={() => setTarifasAbiertas(true)}
             />
           ) : (
             <div className="vacio">
@@ -209,7 +236,10 @@ export default function App() {
                   Corrige lo que haga falta y pulsa <strong>🧠 Guardar corrección</strong>: esas correcciones alimentan
                   el panel de precisión y ajustan el criterio del modelo en los próximos análisis.
                 </li>
-                <li>Exporta el JSON estructurado para tu presupuesto.</li>
+                <li>
+                  Revisa el <strong>💰 presupuesto estimado</strong> (ajustable en <strong>💶 Tarifas</strong>) y exporta
+                  el JSON estructurado.
+                </li>
               </ol>
               <p className="vacio__nota">
                 La app nunca inventa datos: si algo no es legible en el plano, el campo queda vacío y se añade una

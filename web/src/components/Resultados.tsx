@@ -9,9 +9,11 @@ import {
   TIPOS_PIEZA,
   TOLERANCIAS,
 } from '../catalogo';
+import type { Tarifas } from '../tarifas';
 import type { Aviso, Extraccion, FamiliaMaterial, TipoPieza } from '../tipos';
 import { validar } from '../validaciones';
 import { Campo } from './Campo';
+import { Presupuesto } from './Presupuesto';
 
 export type EstadoFeedback = 'inactivo' | 'guardando' | 'guardado' | 'error';
 
@@ -22,11 +24,26 @@ interface Props {
   onGuardarFeedback: () => void;
   estadoFeedback: EstadoFeedback;
   mensajeFeedback: string | null;
+  incluirImagenFeedback: boolean;
+  onCambiarIncluirImagen: (v: boolean) => void;
+  tarifas: Tarifas;
+  onAbrirTarifas: () => void;
 }
 
 type ClaveCampo = Exclude<keyof Extraccion, 'observaciones'>;
 
-export function Resultados({ datos, onCambio, demo, onGuardarFeedback, estadoFeedback, mensajeFeedback }: Props) {
+export function Resultados({
+  datos,
+  onCambio,
+  demo,
+  onGuardarFeedback,
+  estadoFeedback,
+  mensajeFeedback,
+  incluirImagenFeedback,
+  onCambiarIncluirImagen,
+  tarifas,
+  onAbrirTarifas,
+}: Props) {
   const avisos = useMemo(() => validar(datos), [datos]);
   const avisosDe = (campo: keyof Extraccion) => avisos.filter((a) => a.campo === campo).map((a) => a.mensaje);
 
@@ -210,6 +227,8 @@ export function Resultados({ datos, onCambio, demo, onGuardarFeedback, estadoFee
         </div>
       </fieldset>
 
+      <Presupuesto datos={datos} tarifas={tarifas} onAbrirTarifas={onAbrirTarifas} />
+
       {datos.observaciones.length > 0 && (
         <fieldset className="grupo">
           <legend>Observaciones del análisis</legend>
@@ -225,6 +244,16 @@ export function Resultados({ datos, onCambio, demo, onGuardarFeedback, estadoFee
         <div className="acciones__feedback-info">
           {estadoFeedback === 'guardado' && <span className="feedback-mensaje feedback-mensaje--ok">✓ {mensajeFeedback}</span>}
           {estadoFeedback === 'error' && <span className="feedback-mensaje feedback-mensaje--error">⚠ {mensajeFeedback}</span>}
+          {(estadoFeedback === 'inactivo' || estadoFeedback === 'guardando') && (
+            <label className="feedback-imagen">
+              <input
+                type="checkbox"
+                checked={incluirImagenFeedback}
+                onChange={(e) => onCambiarIncluirImagen(e.target.checked)}
+              />
+              Incluir imagen del plano en el dataset de mejora (útil para un futuro fine-tuning)
+            </label>
+          )}
         </div>
         <button
           className="btn btn--aprender"
