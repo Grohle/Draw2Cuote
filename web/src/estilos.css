@@ -77,6 +77,12 @@ body {
   font-size: 0.9rem;
 }
 
+.btn--toggle {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
 .cabecera__proveedor {
   font-size: 0.75rem;
   text-transform: uppercase;

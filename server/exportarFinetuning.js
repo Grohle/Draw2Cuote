@@ -14,13 +14,16 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SYSTEM } from './extract.js';
+import { INSTRUCCION, sistemaBase } from './extract.js';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const ORIGEN = path.join(AQUI, 'datos', 'feedback.jsonl');
 const DESTINO = path.join(AQUI, 'datos', 'finetuning.jsonl');
 
-const INSTRUCCION = 'Extrae los datos de este plano para presupuestarlo. Sigue las reglas del sistema al pie de la letra.';
+const NOTA_SIN_IMAGEN = {
+  es: '[Imagen del plano no incluida en este evento — usuario no marcó "incluir imagen". Este ejemplo solo es útil para fine-tuning textual/de criterio, no de visión.]',
+  en: '[Drawing image not included in this event — user did not check "include image". This example is only useful for textual/judgment fine-tuning, not vision.]',
+};
 
 if (!existsSync(ORIGEN)) {
   console.error(`No hay feedback registrado todavía en ${ORIGEN}.`);
@@ -39,6 +42,7 @@ if (eventos.length === 0) {
 }
 
 const lineas = eventos.map((ev) => {
+  const idioma = ev.idioma === 'en' ? 'en' : 'es';
   const contenidoUsuario = [];
   if (ev.imagen?.dataBase64) {
     contenidoUsuario.push({
@@ -46,16 +50,13 @@ const lineas = eventos.map((ev) => {
       source: { type: 'base64', media_type: ev.imagen.mediaType, data: ev.imagen.dataBase64 },
     });
   } else {
-    contenidoUsuario.push({
-      type: 'text',
-      text: '[Imagen del plano no incluida en este evento — usuario no marcó "incluir imagen". Este ejemplo solo es útil para fine-tuning textual/de criterio, no de visión.]',
-    });
+    contenidoUsuario.push({ type: 'text', text: NOTA_SIN_IMAGEN[idioma] });
   }
-  contenidoUsuario.push({ type: 'text', text: INSTRUCCION });
+  contenidoUsuario.push({ type: 'text', text: INSTRUCCION[idioma] });
 
   return JSON.stringify({
     messages: [
-      { role: 'system', content: SYSTEM },
+      { role: 'system', content: sistemaBase(idioma) },
       { role: 'user', content: contenidoUsuario },
       { role: 'assistant', content: JSON.stringify(ev.extraccion_final) },
     ],
@@ -64,6 +65,7 @@ const lineas = eventos.map((ev) => {
       timestamp: ev.timestamp,
       proveedor: ev.proveedor,
       modelo: ev.modelo,
+      idioma,
       campos_corregidos: ev.campos_corregidos,
       con_imagen: Boolean(ev.imagen?.dataBase64),
     },

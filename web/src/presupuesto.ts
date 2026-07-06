@@ -1,6 +1,7 @@
-import { NOMBRES_CAMPO } from './catalogo';
+import type { Textos } from './i18n';
 import type { Tarifas } from './tarifas';
 import type { Extraccion, FamiliaMaterial } from './tipos';
+import { etiquetaPeso, formatearLongitud, formatearPeso, precioPorKgAUnidadMostrada, type SistemaUnidades } from './unidades';
 
 /** Densidades físicas (kg/m³) — no son tarifas de taller, son constantes del material. */
 const DENSIDADES: Record<FamiliaMaterial, number> = {
@@ -10,6 +11,14 @@ const DENSIDADES: Record<FamiliaMaterial, number> = {
   galvanizado: 7850,
   otro: 7850,
 };
+
+/** Variantes en ambos idiomas que significan "sin acabado / material en bruto" (el texto lo escribe el modelo o el usuario). */
+const SIN_ACABADO = ['bruto', 'raw', 'raw / mill finish', 'none', 'sin acabado', 'no finish', 'mill finish', 'as-is'];
+
+function tieneAcabado(valor: string | null): boolean {
+  if (!valor) return false;
+  return !SIN_ACABADO.includes(valor.trim().toLowerCase());
+}
 
 export interface LineaPresupuesto {
   concepto: string;
@@ -42,28 +51,37 @@ function contarRoscas(texto: string | null): number {
   return coincidencias.reduce((suma, m) => suma + parseInt(m[1], 10), 0);
 }
 
-function etiqueta(campo: string): string {
-  return NOMBRES_CAMPO[campo] ?? campo;
+function formatearPrecioKg(precioKg: number, unidades: SistemaUnidades): string {
+  const valor = precioPorKgAUnidadMostrada(precioKg, unidades);
+  return `${valor.toFixed(2)} €/${etiquetaPeso(unidades)}`;
 }
 
 /**
  * Presupuesto orientativo a partir de la extracción y unas tarifas configurables.
  * Usa geometría simplificada (rectángulo/cilindro envolvente, no el perfil real de
  * la pieza): es una estimación de orden de magnitud, no un presupuesto de nesting real.
+ * Las tarifas y la lógica de cálculo siempre operan en unidades métricas (mm, kg);
+ * `unidades` solo afecta a cómo se formatean los números en el desglose mostrado.
  */
-export function calcularPresupuesto(datos: Extraccion, tarifas: Tarifas): ResultadoPresupuesto {
+export function calcularPresupuesto(
+  datos: Extraccion,
+  tarifas: Tarifas,
+  t: Textos,
+  unidades: SistemaUnidades
+): ResultadoPresupuesto {
   const tipo = datos.tipo_pieza.valor;
   const familia = datos.material_familia.valor;
   const cantidad = datos.cantidad.valor;
+  const p = t.presupuesto;
 
   const faltantesGenerales: string[] = [];
-  if (!tipo) faltantesGenerales.push(etiqueta('tipo_pieza'));
-  if (!familia) faltantesGenerales.push(etiqueta('material_familia'));
-  if (!cantidad || cantidad <= 0) faltantesGenerales.push(etiqueta('cantidad'));
+  if (!tipo) faltantesGenerales.push(t.campos.tipo_pieza);
+  if (!familia) faltantesGenerales.push(t.campos.material_familia);
+  if (!cantidad || cantidad <= 0) faltantesGenerales.push(t.campos.cantidad);
   if (faltantesGenerales.length > 0) return NO_CALCULABLE(faltantesGenerales);
 
   if (tipo === 'otro') {
-    return NO_CALCULABLE(['No hay fórmula de cálculo para el tipo de pieza "Otro": corrígelo a chapa/torneado/fresado/tubo si corresponde.']);
+    return NO_CALCULABLE([p.tipoOtroNoCalculable]);
   }
 
   const densidad = DENSIDADES[familia as FamiliaMaterial];
@@ -81,35 +99,35 @@ export function calcularPresupuesto(datos: Extraccion, tarifas: Tarifas): Result
     const ancho = datos.ancho_mm.valor;
     const espesor = datos.espesor_mm.valor;
     const faltan = [];
-    if (!largo) faltan.push(etiqueta('largo_mm'));
-    if (!ancho) faltan.push(etiqueta('ancho_mm'));
-    if (!espesor) faltan.push(etiqueta('espesor_mm'));
+    if (!largo) faltan.push(t.campos.largo_mm);
+    if (!ancho) faltan.push(t.campos.ancho_mm);
+    if (!espesor) faltan.push(t.campos.espesor_mm);
     if (faltan.length) return NO_CALCULABLE(faltan);
 
     const areaM2 = (largo! / 1000) * (ancho! / 1000);
     const pesoKg = areaM2 * (espesor! / 1000) * densidad;
     const costeMaterial = pesoKg * precioKg;
-    lineas.push({ concepto: `Material (${pesoKg.toFixed(2)} kg × ${precioKg.toFixed(2)} €/kg)`, importe: costeMaterial });
+    lineas.push({ concepto: p.material(formatearPeso(pesoKg, unidades), formatearPrecioKg(precioKg, unidades)), importe: costeMaterial });
 
     const perimetroM = (2 * (largo! + ancho!)) / 1000;
     const costeCorte = perimetroM * tarifas.costeCortePorMetroA1mm * espesor!;
-    lineas.push({ concepto: `Corte (perímetro aprox. ${perimetroM.toFixed(2)} m)`, importe: costeCorte });
-    avisos.push('Coste de corte estimado por el perímetro del rectángulo envolvente, no el perfil real de la pieza.');
+    lineas.push({ concepto: p.corte(formatearLongitud(perimetroM * 1000, unidades)), importe: costeCorte });
+    avisos.push(p.avisoCorteRectangulo);
 
     const costeAgujeros = numAgujeros * tarifas.costePorAgujeroChapa;
-    if (numAgujeros) lineas.push({ concepto: `Agujeros (${numAgujeros} × ${tarifas.costePorAgujeroChapa.toFixed(2)} €)`, importe: costeAgujeros });
+    if (numAgujeros) lineas.push({ concepto: p.agujerosChapa(numAgujeros, `${tarifas.costePorAgujeroChapa.toFixed(2)} €`), importe: costeAgujeros });
 
     const numPliegues = datos.num_pliegues.valor ?? 0;
     const costePliegues = numPliegues * tarifas.costePorPliegue;
-    if (numPliegues) lineas.push({ concepto: `Pliegues (${numPliegues} × ${tarifas.costePorPliegue.toFixed(2)} €)`, importe: costePliegues });
+    if (numPliegues) lineas.push({ concepto: p.pliegues(numPliegues, `${tarifas.costePorPliegue.toFixed(2)} €`), importe: costePliegues });
 
     const costeRoscas = numRoscas * tarifas.costePorRosca;
-    if (numRoscas) lineas.push({ concepto: `Roscas (${numRoscas} × ${tarifas.costePorRosca.toFixed(2)} €)`, importe: costeRoscas });
+    if (numRoscas) lineas.push({ concepto: p.roscas(numRoscas, `${tarifas.costePorRosca.toFixed(2)} €`), importe: costeRoscas });
 
     let costeAcabado = 0;
-    if (datos.acabado.valor && datos.acabado.valor.toLowerCase() !== 'bruto') {
+    if (tieneAcabado(datos.acabado.valor)) {
       costeAcabado = areaM2 * 2 * tarifas.costeAcabadoPorM2;
-      lineas.push({ concepto: `Acabado: ${datos.acabado.valor}`, importe: costeAcabado });
+      lineas.push({ concepto: p.acabado(datos.acabado.valor!), importe: costeAcabado });
     }
 
     costeVariablePorPieza = costeMaterial + costeCorte + costeAgujeros + costePliegues + costeRoscas + costeAcabado;
@@ -119,8 +137,8 @@ export function calcularPresupuesto(datos: Extraccion, tarifas: Tarifas): Result
       const diametro = datos.diametro_max_mm.valor;
       const largo = datos.largo_mm.valor;
       const faltan = [];
-      if (!diametro) faltan.push(etiqueta('diametro_max_mm'));
-      if (!largo) faltan.push(etiqueta('largo_mm'));
+      if (!diametro) faltan.push(t.campos.diametro_max_mm);
+      if (!largo) faltan.push(t.campos.largo_mm);
       if (faltan.length) return NO_CALCULABLE(faltan);
       volumenM3 = Math.PI * (diametro! / 1000 / 2) ** 2 * (largo! / 1000);
     } else {
@@ -128,9 +146,9 @@ export function calcularPresupuesto(datos: Extraccion, tarifas: Tarifas): Result
       const ancho = datos.ancho_mm.valor;
       const alto = datos.alto_mm.valor;
       const faltan = [];
-      if (!largo) faltan.push(etiqueta('largo_mm'));
-      if (!ancho) faltan.push(etiqueta('ancho_mm'));
-      if (!alto) faltan.push(etiqueta('alto_mm'));
+      if (!largo) faltan.push(t.campos.largo_mm);
+      if (!ancho) faltan.push(t.campos.ancho_mm);
+      if (!alto) faltan.push(t.campos.alto_mm);
       if (faltan.length) return NO_CALCULABLE(faltan);
       volumenM3 = (largo! / 1000) * (ancho! / 1000) * (alto! / 1000);
     }
@@ -138,26 +156,27 @@ export function calcularPresupuesto(datos: Extraccion, tarifas: Tarifas): Result
     const pesoStockKg = volumenM3 * densidad * tarifas.factorDesperdicioStock;
     const costeMaterial = pesoStockKg * precioKg;
     lineas.push({
-      concepto: `Material en bruto (${pesoStockKg.toFixed(2)} kg × ${precioKg.toFixed(2)} €/kg, incl. desperdicio)`,
+      concepto: p.materialBruto(formatearPeso(pesoStockKg, unidades), formatearPrecioKg(precioKg, unidades)),
       importe: costeMaterial,
     });
-    avisos.push('Volumen de material en bruto estimado con la geometría envolvente (cilindro/prisma), sin descontar el mecanizado real.');
+    avisos.push(p.avisoVolumenBruto);
 
     const volumenCm3 = volumenM3 * 1e6;
     const minutosPorCm3 = tipo === 'torneado' ? tarifas.minutosPorCm3Torneado : tarifas.minutosPorCm3Fresado;
     const tarifaPorMin = tipo === 'torneado' ? tarifas.tarifaTorneadoPorMin : tarifas.tarifaFresadoPorMin;
     const minutos = volumenCm3 * minutosPorCm3;
     const costeMecanizado = minutos * tarifaPorMin;
+    const nombreTipo = tipo === 'torneado' ? t.tiposPieza.torneado : t.tiposPieza.fresado;
     lineas.push({
-      concepto: `Mecanizado (${tipo}, ${minutos.toFixed(1)} min aprox. × ${tarifaPorMin.toFixed(2)} €/min)`,
+      concepto: p.mecanizado(nombreTipo, minutos.toFixed(1), `${tarifaPorMin.toFixed(2)} €/min`),
       importe: costeMecanizado,
     });
 
     const costeAgujeros = numAgujeros * tarifas.costePorAgujeroMecanizado;
-    if (numAgujeros) lineas.push({ concepto: `Agujeros (${numAgujeros} × ${tarifas.costePorAgujeroMecanizado.toFixed(2)} €)`, importe: costeAgujeros });
+    if (numAgujeros) lineas.push({ concepto: p.agujerosMecanizado(numAgujeros, `${tarifas.costePorAgujeroMecanizado.toFixed(2)} €`), importe: costeAgujeros });
 
     const costeRoscas = numRoscas * tarifas.costePorRosca;
-    if (numRoscas) lineas.push({ concepto: `Roscas (${numRoscas} × ${tarifas.costePorRosca.toFixed(2)} €)`, importe: costeRoscas });
+    if (numRoscas) lineas.push({ concepto: p.roscas(numRoscas, `${tarifas.costePorRosca.toFixed(2)} €`), importe: costeRoscas });
 
     costeVariablePorPieza = costeMaterial + costeMecanizado + costeAgujeros + costeRoscas;
   } else if (tipo === 'tubo_perfil') {
@@ -165,44 +184,44 @@ export function calcularPresupuesto(datos: Extraccion, tarifas: Tarifas): Result
     const largo = datos.largo_mm.valor;
     const espesor = datos.espesor_mm.valor;
     const faltan = [];
-    if (!diametro) faltan.push(etiqueta('diametro_max_mm'));
-    if (!largo) faltan.push(etiqueta('largo_mm'));
-    if (!espesor) faltan.push(etiqueta('espesor_mm'));
+    if (!diametro) faltan.push(t.campos.diametro_max_mm);
+    if (!largo) faltan.push(t.campos.largo_mm);
+    if (!espesor) faltan.push(t.campos.espesor_mm);
     if (faltan.length) return NO_CALCULABLE(faltan);
 
     const diametroMedioM = (diametro! - espesor!) / 1000;
     const pesoKg = Math.PI * diametroMedioM * (espesor! / 1000) * (largo! / 1000) * densidad;
     const costeMaterial = pesoKg * precioKg;
-    lineas.push({ concepto: `Material (${pesoKg.toFixed(2)} kg × ${precioKg.toFixed(2)} €/kg)`, importe: costeMaterial });
-    avisos.push('Peso estimado con la fórmula de tubo de pared delgada (perímetro medio × espesor × longitud), no la sección real.');
+    lineas.push({ concepto: p.material(formatearPeso(pesoKg, unidades), formatearPrecioKg(precioKg, unidades)), importe: costeMaterial });
+    avisos.push(p.avisoTuboPared);
 
     const perimetroSeccionM = (Math.PI * diametro!) / 1000;
     const costeCorte = 2 * perimetroSeccionM * tarifas.costeCortePorMetroA1mm * espesor!;
-    lineas.push({ concepto: 'Corte a medida (2 cortes transversales)', importe: costeCorte });
+    lineas.push({ concepto: p.corteTubo, importe: costeCorte });
 
     const numPliegues = datos.num_pliegues.valor ?? 0;
     const costePliegues = numPliegues * tarifas.costePorPliegue;
-    if (numPliegues) lineas.push({ concepto: `Curvado (${numPliegues} × ${tarifas.costePorPliegue.toFixed(2)} €)`, importe: costePliegues });
+    if (numPliegues) lineas.push({ concepto: p.curvado(numPliegues, `${tarifas.costePorPliegue.toFixed(2)} €`), importe: costePliegues });
 
     const costeAgujeros = numAgujeros * tarifas.costePorAgujeroChapa;
-    if (numAgujeros) lineas.push({ concepto: `Agujeros (${numAgujeros} × ${tarifas.costePorAgujeroChapa.toFixed(2)} €)`, importe: costeAgujeros });
+    if (numAgujeros) lineas.push({ concepto: p.agujerosChapa(numAgujeros, `${tarifas.costePorAgujeroChapa.toFixed(2)} €`), importe: costeAgujeros });
 
     costeVariablePorPieza = costeMaterial + costeCorte + costePliegues + costeAgujeros;
   }
 
   if (tieneToleranciaCritica) {
     const recargo = costeVariablePorPieza * (tarifas.recargoToleranciaCritica - 1);
-    lineas.push({ concepto: 'Recargo por tolerancias críticas', importe: recargo });
+    lineas.push({ concepto: p.recargoToleranciaLinea, importe: recargo });
     costeVariablePorPieza += recargo;
   }
 
-  lineas.push({ concepto: 'Preparación / puesta a punto (una vez por lote)', importe: tarifas.costeSetup });
+  lineas.push({ concepto: p.setupLinea, importe: tarifas.costeSetup });
   const totalAntesMargen = costeVariablePorPieza * cantidad! + tarifas.costeSetup;
 
   let totalLote = totalAntesMargen;
   if (tarifas.margen !== 1) {
     const margenImporte = totalAntesMargen * (tarifas.margen - 1);
-    lineas.push({ concepto: `Margen (${Math.round((tarifas.margen - 1) * 100)}%)`, importe: margenImporte });
+    lineas.push({ concepto: p.margenLinea(Math.round((tarifas.margen - 1) * 100)), importe: margenImporte });
     totalLote = totalAntesMargen + margenImporte;
   }
 
