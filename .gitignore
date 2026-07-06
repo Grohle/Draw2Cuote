@@ -3,3 +3,4 @@ web/dist/
 web/tsconfig.tsbuildinfo
 .env
 *.log
+server/datos/

@@ -57,6 +57,28 @@ export const CALIDADES: Record<FamiliaMaterial, string[]> = {
 
 export const TOLERANCIAS = ['ISO 2768-f', 'ISO 2768-m', 'ISO 2768-c', 'ISO 2768-v'];
 
+/** Etiquetas cortas por campo, para el panel de calibración/precisión. */
+export const NOMBRES_CAMPO: Record<string, string> = {
+  tipo_pieza: 'Tipo de pieza',
+  numero_plano: 'Nº de plano',
+  denominacion: 'Denominación',
+  revision: 'Revisión',
+  largo_mm: 'Largo / longitud',
+  ancho_mm: 'Ancho',
+  alto_mm: 'Alto',
+  diametro_max_mm: 'Ø máximo',
+  espesor_mm: 'Espesor',
+  material_familia: 'Familia de material',
+  material_calidad: 'Calidad / grado',
+  acabado: 'Acabado',
+  cantidad: 'Cantidad',
+  tolerancia_general: 'Tolerancia general',
+  tolerancias_criticas: 'Tolerancias críticas',
+  num_pliegues: 'Pliegues',
+  num_agujeros: 'Agujeros',
+  roscas: 'Roscas',
+};
+
 export const ACABADOS = [
   'Bruto',
   'Zincado',
