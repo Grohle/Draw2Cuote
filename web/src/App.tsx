@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { cargarAjustes, configApi, esModoDemo, type AjustesApp } from './ajustes';
 import { Ajustes } from './components/Ajustes';
 import { Calibracion } from './components/Calibracion';
 import { Dropzone, type ArchivoPlano } from './components/Dropzone';
 import { type EstadoFeedback, Resultados } from './components/Resultados';
 import { Tarifas as ModalTarifas } from './components/Tarifas';
-import { presetDe } from './proveedores';
+import { cargarIdioma, guardarIdioma, obtenerTextos, type Idioma } from './i18n';
+import { presetDe, presetTextos } from './proveedores';
 import { cargarTarifas, type Tarifas } from './tarifas';
 import type { Extraccion, RespuestaExtraccion } from './tipos';
+import { cargarUnidades, guardarUnidades, type SistemaUnidades } from './unidades';
+
+/** Convierte "texto **en negrita**" en nodos con <strong>, para los pasos de la pantalla inicial. */
+function conNegritas(texto: string): ReactNode[] {
+  return texto.split(/\*\*(.+?)\*\*/g).map((parte, i) => (i % 2 === 1 ? <strong key={i}>{parte}</strong> : parte));
+}
 
 export default function App() {
   const [archivo, setArchivo] = useState<ArchivoPlano | null>(null);
@@ -17,6 +24,8 @@ export default function App() {
   const [serverKey, setServerKey] = useState(false);
   const [ajustes, setAjustes] = useState<AjustesApp>(() => cargarAjustes());
   const [tarifas, setTarifas] = useState<Tarifas>(() => cargarTarifas());
+  const [idioma, setIdioma] = useState<Idioma>(() => cargarIdioma());
+  const [unidades, setUnidades] = useState<SistemaUnidades>(() => cargarUnidades());
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [calibracionAbierta, setCalibracionAbierta] = useState(false);
   const [tarifasAbiertas, setTarifasAbiertas] = useState(false);
@@ -26,6 +35,8 @@ export default function App() {
   const [mensajeFeedback, setMensajeFeedback] = useState<string | null>(null);
   const [incluirImagenFeedback, setIncluirImagenFeedback] = useState(false);
 
+  const t = obtenerTextos(idioma);
+
   useEffect(() => {
     fetch('/api/status')
       .then((r) => r.json())
@@ -34,8 +45,19 @@ export default function App() {
   }, []);
 
   const preset = presetDe(ajustes.proveedor);
+  const nombreProveedor = presetTextos(ajustes.proveedor, t).nombre;
   const sinCredenciales = esModoDemo(ajustes, serverKey);
   const pdfNoAdmitido = archivo?.mediaType === 'application/pdf' && !preset.admitePdf;
+
+  const cambiarIdioma = (nuevo: Idioma) => {
+    setIdioma(nuevo);
+    guardarIdioma(nuevo);
+  };
+
+  const cambiarUnidades = (nuevo: SistemaUnidades) => {
+    setUnidades(nuevo);
+    guardarUnidades(nuevo);
+  };
 
   const analizar = async () => {
     if (!archivo) return;
@@ -54,7 +76,7 @@ export default function App() {
           filename: archivo.nombre,
           mediaType: archivo.mediaType,
           dataBase64: archivo.dataBase64,
-          config: configApi(ajustes),
+          config: configApi(ajustes, idioma),
         }),
       });
       const cuerpo = await res.json().catch(() => null);
@@ -94,22 +116,19 @@ export default function App() {
           extraccionFinal: datos,
           proveedor: ajustes.proveedor,
           modelo: ajustes.modelo || preset.modeloDefecto,
+          idioma,
           imagen: incluirImagenFeedback && archivo ? { mediaType: archivo.mediaType, dataBase64: archivo.dataBase64 } : undefined,
         }),
       });
       const cuerpo = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(cuerpo?.error ?? `Error ${res.status} guardando el feedback.`);
+        throw new Error(cuerpo?.error ?? `Error ${res.status}.`);
       }
       const n = (cuerpo.camposCorregidos as string[]).length;
-      setMensajeFeedback(
-        n > 0
-          ? `Gracias: ${n} campo${n === 1 ? '' : 's'} corregido${n === 1 ? '' : 's'} registrado${n === 1 ? '' : 's'} para mejorar el modelo.`
-          : 'Confirmado sin cambios: gracias, ayuda a calibrar la confianza del modelo.'
-      );
+      setMensajeFeedback(t.feedback.exito(n));
       setEstadoFeedback('guardado');
     } catch (e) {
-      setMensajeFeedback(e instanceof Error ? e.message : 'No se pudo guardar el feedback.');
+      setMensajeFeedback(e instanceof Error ? e.message : t.feedback.errorGuardando);
       setEstadoFeedback('error');
     }
   };
@@ -120,38 +139,29 @@ export default function App() {
         <h1>
           Draw2<span>Quote</span>
         </h1>
-        <p className="cabecera__lema">De plano a presupuesto en segundos</p>
+        <p className="cabecera__lema">{t.app.lema}</p>
         <div className="cabecera__derecha">
           {sinCredenciales ? (
-            <span className="cabecera__demo">modo demo</span>
+            <span className="cabecera__demo">{t.app.modoDemo}</span>
           ) : (
-            <span className="cabecera__proveedor" title={`Proveedor: ${preset.nombre}`}>
-              {preset.nombre.split(' (')[0]}
+            <span className="cabecera__proveedor" title={nombreProveedor}>
+              {nombreProveedor.split(' (')[0]}
             </span>
           )}
-          <button
-            className="btn btn--ajustes"
-            title="Tarifas de presupuesto"
-            aria-label="Tarifas de presupuesto"
-            onClick={() => setTarifasAbiertas(true)}
-          >
-            💶 Tarifas
+          <button className="btn btn--toggle" title={t.app.tituloIdioma} aria-label={t.app.tituloIdioma} onClick={() => cambiarIdioma(idioma === 'es' ? 'en' : 'es')}>
+            🌐 {idioma === 'es' ? 'ES' : 'EN'}
           </button>
-          <button
-            className="btn btn--ajustes"
-            title="Precisión del modelo"
-            aria-label="Precisión del modelo"
-            onClick={() => setCalibracionAbierta(true)}
-          >
-            📊 Precisión
+          <button className="btn btn--toggle" title={t.app.tituloUnidades} aria-label={t.app.tituloUnidades} onClick={() => cambiarUnidades(unidades === 'metrico' ? 'imperial' : 'metrico')}>
+            📐 {unidades === 'metrico' ? 'mm' : 'in'}
           </button>
-          <button
-            className="btn btn--ajustes"
-            title="Ajustes de la API"
-            aria-label="Ajustes de la API"
-            onClick={() => setAjustesAbiertos(true)}
-          >
-            ⚙ Ajustes
+          <button className="btn btn--ajustes" title={t.app.tituloTarifas} aria-label={t.app.tituloTarifas} onClick={() => setTarifasAbiertas(true)}>
+            {t.app.botonTarifas}
+          </button>
+          <button className="btn btn--ajustes" title={t.app.tituloPrecision} aria-label={t.app.tituloPrecision} onClick={() => setCalibracionAbierta(true)}>
+            {t.app.botonPrecision}
+          </button>
+          <button className="btn btn--ajustes" title={t.app.tituloAjustes} aria-label={t.app.tituloAjustes} onClick={() => setAjustesAbiertos(true)}>
+            {t.app.botonAjustes}
           </button>
         </div>
       </header>
@@ -159,15 +169,18 @@ export default function App() {
       {ajustesAbiertos && (
         <Ajustes
           serverKey={serverKey}
+          t={t}
+          idioma={idioma}
           onCerrar={(nuevos) => {
             setAjustes(nuevos);
             setAjustesAbiertos(false);
           }}
         />
       )}
-      {calibracionAbierta && <Calibracion onCerrar={() => setCalibracionAbierta(false)} />}
+      {calibracionAbierta && <Calibracion onCerrar={() => setCalibracionAbierta(false)} t={t} />}
       {tarifasAbiertas && (
         <ModalTarifas
+          t={t}
           onCerrar={(nuevas) => {
             setTarifas(nuevas);
             setTarifasAbiertas(false);
@@ -179,6 +192,7 @@ export default function App() {
         <div className="columna columna--plano">
           <Dropzone
             archivo={archivo}
+            t={t}
             onArchivo={(a) => {
               setArchivo(a);
               setDatos(null);
@@ -187,24 +201,11 @@ export default function App() {
             }}
             onError={setError}
           />
-          {pdfNoAdmitido && (
-            <div className="error">
-              ⚠ {preset.nombre} no admite PDF: sube una imagen del plano o cambia a Anthropic o Google Gemini en ⚙
-              Ajustes.
-            </div>
-          )}
-          <button
-            className="btn btn--primario btn--analizar"
-            onClick={analizar}
-            disabled={!archivo || analizando || pdfNoAdmitido}
-          >
-            {analizando ? 'Analizando plano…' : 'Analizar plano'}
+          {pdfNoAdmitido && <div className="error">⚠ {t.app.pdfNoAdmitido(nombreProveedor)}</div>}
+          <button className="btn btn--primario btn--analizar" onClick={analizar} disabled={!archivo || analizando || pdfNoAdmitido}>
+            {analizando ? t.app.analizando : t.app.botonAnalizar}
           </button>
-          {analizando && (
-            <p className="pista">
-              Leyendo cotas, cajetín y notas del plano. Puede tardar un poco en planos densos.
-            </p>
-          )}
+          {analizando && <p className="pista">{t.app.pista}</p>}
           {error && <div className="error">⚠ {error}</div>}
         </div>
 
@@ -221,35 +222,20 @@ export default function App() {
               onCambiarIncluirImagen={setIncluirImagenFeedback}
               tarifas={tarifas}
               onAbrirTarifas={() => setTarifasAbiertas(true)}
+              t={t}
+              idioma={idioma}
+              unidades={unidades}
             />
           ) : (
             <div className="vacio">
-              <h2>¿Cómo funciona?</h2>
+              <h2>{t.app.vacioTitulo}</h2>
               <ol>
-                <li>Arrastra el plano (PDF o imagen) al panel de la izquierda.</li>
-                <li>Pulsa <strong>Analizar plano</strong>: la IA lee cajetín, cotas y notas.</li>
-                <li>
-                  Revisa los datos extraídos. Cada campo indica la <strong>confianza</strong> de la lectura y los
-                  valores dudosos quedan marcados para revisión.
-                </li>
-                <li>
-                  Corrige lo que haga falta y pulsa <strong>🧠 Guardar corrección</strong>: esas correcciones alimentan
-                  el panel de precisión y ajustan el criterio del modelo en los próximos análisis.
-                </li>
-                <li>
-                  Revisa el <strong>💰 presupuesto estimado</strong> (ajustable en <strong>💶 Tarifas</strong>) y exporta
-                  el JSON estructurado.
-                </li>
+                {t.app.vacioPasos.map((paso, i) => (
+                  <li key={i}>{conNegritas(paso)}</li>
+                ))}
               </ol>
               <p className="vacio__nota">
-                La app nunca inventa datos: si algo no es legible en el plano, el campo queda vacío y se añade una
-                observación.{' '}
-                {sinCredenciales && (
-                  <>
-                    En <strong>⚙ Ajustes</strong> puedes conectar Anthropic, Google Gemini (gratuita), Ollama, LM
-                    Studio, vLLM o cualquier API compatible con OpenAI.
-                  </>
-                )}
+                {t.app.vacioNota} {sinCredenciales && t.app.vacioNotaSinCredenciales}
               </p>
             </div>
           )}

@@ -1,12 +1,20 @@
+import type { Textos } from './i18n';
 import type { FamiliaMaterial, TipoPieza } from './tipos';
 
-export const TIPOS_PIEZA: { valor: TipoPieza; etiqueta: string }[] = [
-  { valor: 'chapa_plegada', etiqueta: 'Chapa plegada' },
-  { valor: 'torneado', etiqueta: 'Torneado' },
-  { valor: 'fresado', etiqueta: 'Fresado' },
-  { valor: 'tubo_perfil', etiqueta: 'Tubo / perfil' },
-  { valor: 'otro', etiqueta: 'Otro' },
-];
+const VALORES_TIPO_PIEZA: TipoPieza[] = ['chapa_plegada', 'torneado', 'fresado', 'tubo_perfil', 'otro'];
+const VALORES_FAMILIA: FamiliaMaterial[] = ['acero_carbono', 'acero_inoxidable', 'aluminio', 'galvanizado', 'otro'];
+
+export function tiposPiezaOpciones(t: Textos): { valor: TipoPieza; etiqueta: string }[] {
+  return VALORES_TIPO_PIEZA.map((v) => ({ valor: v, etiqueta: t.tiposPieza[v] }));
+}
+
+export function familiasOpciones(t: Textos): { valor: FamiliaMaterial; etiqueta: string }[] {
+  return VALORES_FAMILIA.map((v) => ({ valor: v, etiqueta: t.familias[v] }));
+}
+
+export function etiquetaFamilia(v: FamiliaMaterial | null, t: Textos): string {
+  return v ? t.familias[v] : '—';
+}
 
 /**
  * Qué campos aplican a cada tipo de pieza. Con tipo desconocido u "otro"
@@ -30,23 +38,10 @@ export function campoAplica(campo: string, tipo: TipoPieza | null): boolean {
   }
 }
 
-/** Espesores comerciales habituales de chapa (mm) */
-export const ESPESORES_ESTANDAR = [
-  0.5, 0.8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25,
-];
+/** Espesores comerciales habituales de chapa, en milímetros (unidad canónica). */
+export const ESPESORES_ESTANDAR = [0.5, 0.8, 1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25];
 
-export const FAMILIAS: { valor: FamiliaMaterial; etiqueta: string }[] = [
-  { valor: 'acero_carbono', etiqueta: 'Acero al carbono' },
-  { valor: 'acero_inoxidable', etiqueta: 'Acero inoxidable' },
-  { valor: 'aluminio', etiqueta: 'Aluminio' },
-  { valor: 'galvanizado', etiqueta: 'Galvanizado' },
-  { valor: 'otro', etiqueta: 'Otro' },
-];
-
-export const etiquetaFamilia = (v: FamiliaMaterial | null): string =>
-  FAMILIAS.find((f) => f.valor === v)?.etiqueta ?? '—';
-
-/** Calidades habituales por familia, para el desplegable de ayuda */
+/** Calidades habituales por familia — códigos técnicos universales, no se traducen. */
 export const CALIDADES: Record<FamiliaMaterial, string[]> = {
   acero_carbono: ['S235JR', 'S275JR', 'S355JR', 'DC01', 'DD11'],
   acero_inoxidable: ['AISI 304', 'AISI 316L', 'AISI 430', 'AISI 441'],
@@ -55,58 +50,12 @@ export const CALIDADES: Record<FamiliaMaterial, string[]> = {
   otro: [],
 };
 
+/** Norma de tolerancias — código universal, no se traduce. */
 export const TOLERANCIAS = ['ISO 2768-f', 'ISO 2768-m', 'ISO 2768-c', 'ISO 2768-v'];
 
-/** Etiquetas cortas por campo, para el panel de calibración/precisión. */
-export const NOMBRES_CAMPO: Record<string, string> = {
-  tipo_pieza: 'Tipo de pieza',
-  numero_plano: 'Nº de plano',
-  denominacion: 'Denominación',
-  revision: 'Revisión',
-  largo_mm: 'Largo / longitud',
-  ancho_mm: 'Ancho',
-  alto_mm: 'Alto',
-  diametro_max_mm: 'Ø máximo',
-  espesor_mm: 'Espesor',
-  material_familia: 'Familia de material',
-  material_calidad: 'Calidad / grado',
-  acabado: 'Acabado',
-  cantidad: 'Cantidad',
-  tolerancia_general: 'Tolerancia general',
-  tolerancias_criticas: 'Tolerancias críticas',
-  num_pliegues: 'Pliegues',
-  num_agujeros: 'Agujeros',
-  roscas: 'Roscas',
-};
+const ACABADOS_ES = ['Bruto', 'Zincado', 'Galvanizado en caliente', 'Pintado RAL', 'Anodizado', 'Granallado', 'Pulido'];
+const ACABADOS_EN = ['Raw / mill finish', 'Zinc plated', 'Hot-dip galvanized', 'RAL painted', 'Anodized', 'Shot blasted', 'Polished'];
 
-export const ACABADOS = [
-  'Bruto',
-  'Zincado',
-  'Galvanizado en caliente',
-  'Pintado RAL',
-  'Anodizado',
-  'Granallado',
-  'Pulido',
-];
-
-/** Texto de ayuda que se muestra junto a cada campo */
-export const AYUDAS: Record<string, string> = {
-  tipo_pieza: 'Tipo de fabricación detectado en el plano. Determina qué campos aplican: chapa (espesor, pliegues), torneado (diámetro), fresado (alto), tubo (pared).',
-  numero_plano: 'Código que identifica el plano, normalmente en el cajetín (esquina inferior derecha).',
-  denominacion: 'Nombre de la pieza tal y como figura en el cajetín.',
-  revision: 'Índice de revisión del plano (A, B, 01...). Presupuestar siempre sobre la última revisión.',
-  largo_mm: 'Longitud total o dimensión mayor de la pieza (desarrollo si es chapa plegada), en milímetros.',
-  ancho_mm: 'Dimensión menor de la pieza, en milímetros.',
-  alto_mm: 'Tercera dimensión de piezas prismáticas fresadas, en milímetros.',
-  diametro_max_mm: 'Diámetro exterior máximo de piezas de revolución o tubo redondo, en milímetros.',
-  espesor_mm: 'Espesor de la chapa o de la pared del tubo en mm. Suele indicarse en el cajetín o como nota "e=", "t=" o "#".',
-  material_familia: 'Familia del material. Determina precio base, procesos posibles y consumibles.',
-  material_calidad: 'Grado concreto del material (S235JR, AISI 304, 5754...). Afecta directamente al coste.',
-  acabado: 'Tratamiento superficial posterior al corte/plegado: zincado, galvanizado, pintura RAL, etc.',
-  cantidad: 'Número de piezas a presupuestar. Cambia el precio unitario por amortización de preparación.',
-  tolerancia_general: 'Norma de tolerancias generales (ISO 2768-m es la habitual). Tolerancias finas encarecen.',
-  tolerancias_criticas: 'Tolerancias más exigentes que la general: ajustes ISO (H7, g6...), geométricas (concentricidad, runout, planitud) o cotas con ±. Encarecen el mecanizado.',
-  num_pliegues: 'Número de dobleces. Cada pliegue añade tiempo de plegadora al presupuesto.',
-  num_agujeros: 'Número total de taladros o punzonados de la pieza.',
-  roscas: 'Roscas a mecanizar (métrica y cantidad). Cada rosca añade una operación.',
-};
+export function acabadosSugeridos(idioma: 'es' | 'en'): string[] {
+  return idioma === 'en' ? ACABADOS_EN : ACABADOS_ES;
+}

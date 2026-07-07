@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { EsquemaExtraccion, extraerDatosPlano, hayClaveServidor, probarProveedor } from './extract.js';
 import { calcularEstadisticas, registrarFeedback } from './feedback.js';
+import { mensajes } from './mensajes.js';
 
 const PORT = process.env.PORT || 3001;
 const MAX_BYTES = 32 * 1024 * 1024; // límite de la API para PDF
@@ -26,36 +27,38 @@ app.get('/api/status', (_req, res) => {
 // Valida la configuración del panel de ajustes contra el proveedor elegido
 app.post('/api/test-key', async (req, res) => {
   const config = req.body?.config ?? {};
+  const m = mensajes(config.idioma);
   if ((config.proveedor ?? 'anthropic') === 'anthropic' && !config.apiKey && !hayClaveServidor()) {
-    return res.status(400).json({ error: 'No hay ninguna clave que probar: introduce una en Ajustes.' });
+    return res.status(400).json({ error: m.faltaClaveQueProbar });
   }
   try {
     await probarProveedor(config);
     res.json({ ok: true });
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
-      return res.status(401).json({ error: 'Clave inválida o revocada.' });
+      return res.status(401).json({ error: m.claveInvalida });
     }
     if (err instanceof Anthropic.APIConnectionError) {
-      return res.status(503).json({ error: 'No se pudo conectar con la API de Claude.' });
+      return res.status(503).json({ error: m.noConectaApi });
     }
     const status = Number.isInteger(err.status) ? err.status : 502;
-    res.status(status).json({ error: err.message || 'Error probando la conexión.' });
+    res.status(status).json({ error: err.message || m.errorProbandoConexion });
   }
 });
 
 app.post('/api/extract', async (req, res) => {
   const { mediaType, dataBase64, config } = req.body ?? {};
+  const m = mensajes(config?.idioma);
 
   if (!mediaType || !dataBase64) {
-    return res.status(400).json({ error: 'Faltan mediaType o dataBase64 en la petición.' });
+    return res.status(400).json({ error: m.faltanDatos });
   }
   if (!TIPOS_ADMITIDOS.has(mediaType)) {
-    return res.status(415).json({ error: `Tipo de archivo no admitido: ${mediaType}. Usa PDF, PNG, JPG, WebP o GIF.` });
+    return res.status(415).json({ error: m.tipoNoAdmitido(mediaType) });
   }
   // base64 ~ 4/3 del tamaño real
   if (dataBase64.length * 0.75 > MAX_BYTES) {
-    return res.status(413).json({ error: 'El archivo supera el límite de 32 MB.' });
+    return res.status(413).json({ error: m.archivoDemasiadoGrande });
   }
 
   try {
@@ -63,30 +66,31 @@ app.post('/api/extract', async (req, res) => {
     res.json(resultado);
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
-      return res.status(401).json({ error: 'Credenciales de la API inválidas. Revisa la clave en Ajustes (o ANTHROPIC_API_KEY en el servidor).' });
+      return res.status(401).json({ error: m.credencialesInvalidas });
     }
     if (err instanceof Anthropic.RateLimitError) {
-      return res.status(429).json({ error: 'Límite de peticiones alcanzado. Espera unos segundos y reintenta.' });
+      return res.status(429).json({ error: m.limitePeticiones });
     }
     if (err instanceof Anthropic.APIConnectionError) {
-      return res.status(503).json({ error: 'No se pudo conectar con la API de Claude. Comprueba la red.' });
+      return res.status(503).json({ error: m.noConectaApiRed });
     }
     if (err instanceof Anthropic.APIError) {
-      return res.status(502).json({ error: `Error de la API (${err.status}): ${err.message}` });
+      return res.status(502).json({ error: m.errorApi(err.status, err.message) });
     }
     const status = err.status && Number.isInteger(err.status) ? err.status : 500;
     console.error('[extract]', err);
-    res.status(status).json({ error: err.message || 'Error inesperado analizando el plano.' });
+    res.status(status).json({ error: err.message || m.errorInesperado });
   }
 });
 
 // Bucle de aprendizaje: el usuario confirma o corrige una extracción ya revisada.
 app.post('/api/feedback', (req, res) => {
-  const { extraccionOriginal, extraccionFinal, proveedor, modelo, imagen } = req.body ?? {};
+  const { extraccionOriginal, extraccionFinal, proveedor, modelo, imagen, idioma } = req.body ?? {};
+  const m = mensajes(idioma);
   const original = EsquemaExtraccion.safeParse(extraccionOriginal);
   const final = EsquemaExtraccion.safeParse(extraccionFinal);
   if (!original.success || !final.success) {
-    return res.status(400).json({ error: 'La extracción enviada no tiene el formato esperado.' });
+    return res.status(400).json({ error: m.formatoInesperado });
   }
   try {
     const { camposCorregidos } = registrarFeedback({
@@ -95,21 +99,22 @@ app.post('/api/feedback', (req, res) => {
       proveedor,
       modelo,
       imagen,
+      idioma,
     });
     res.json({ ok: true, camposCorregidos });
   } catch (err) {
     console.error('[feedback]', err);
-    res.status(500).json({ error: 'No se pudo guardar el feedback.' });
+    res.status(500).json({ error: m.noGuardoFeedback });
   }
 });
 
 // Estadísticas de calibración: qué % de cada campo se ha corregido, agrupado por confianza.
-app.get('/api/estadisticas', (_req, res) => {
+app.get('/api/estadisticas', (req, res) => {
   try {
     res.json(calcularEstadisticas());
   } catch (err) {
     console.error('[estadisticas]', err);
-    res.status(500).json({ error: 'No se pudieron calcular las estadísticas.' });
+    res.status(500).json({ error: mensajes(req.query.idioma).noCalculoEstadisticas });
   }
 });
 

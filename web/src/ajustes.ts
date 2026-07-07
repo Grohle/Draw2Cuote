@@ -1,3 +1,4 @@
+import type { Idioma } from './i18n';
 import { presetDe, type IdProveedor } from './proveedores';
 
 export interface AjustesApp {
@@ -37,12 +38,13 @@ export function guardarAjustes(ajustes: AjustesApp): void {
 }
 
 /** Configuración que viaja al servidor con cada análisis / prueba de conexión */
-export function configApi(ajustes: AjustesApp) {
+export function configApi(ajustes: AjustesApp, idioma: Idioma) {
   return {
     proveedor: ajustes.proveedor,
     apiKey: ajustes.apiKey || undefined,
     baseUrl: ajustes.baseUrl || undefined,
     modelo: ajustes.modelo || undefined,
+    idioma,
   };
 }
 

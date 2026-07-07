@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { FAMILIAS } from '../catalogo';
+import { familiasOpciones } from '../catalogo';
+import type { Textos } from '../i18n';
 import { cargarTarifas, guardarTarifas, TARIFAS_DEFECTO, type Tarifas as TTarifas } from '../tarifas';
 
 interface Props {
   onCerrar: (tarifas: TTarifas) => void;
+  t: Textos;
 }
 
 interface CampoNumericoProps {
@@ -30,8 +32,9 @@ function CampoNumerico({ etiqueta, unidad, valor, onCambio }: CampoNumericoProps
   );
 }
 
-export function Tarifas({ onCerrar }: Props) {
+export function Tarifas({ onCerrar, t }: Props) {
   const [tarifas, setTarifas] = useState<TTarifas>(() => cargarTarifas());
+  const tt = t.tarifas;
 
   const guardar = () => {
     guardarTarifas(tarifas);
@@ -42,128 +45,125 @@ export function Tarifas({ onCerrar }: Props) {
 
   return (
     <div className="modal-fondo" onClick={() => onCerrar(cargarTarifas())}>
-      <div className="modal modal--ancho" role="dialog" aria-label="Tarifas de presupuesto" onClick={(e) => e.stopPropagation()}>
-        <h2>💶 Tarifas de presupuesto</h2>
-        <p className="modal__nota">
-          El presupuesto estimado usa geometría simplificada (rectángulo/cilindro envolvente) y estas tarifas — ajústalas
-          a los costes reales de tu taller. Se guardan solo en este navegador.
-        </p>
+      <div className="modal modal--ancho" role="dialog" aria-label={t.app.tituloTarifas} onClick={(e) => e.stopPropagation()}>
+        <h2>{t.app.botonTarifas}</h2>
+        <p className="modal__nota">{tt.nota}</p>
 
-        <h3 className="tarifa-seccion">Material (€/kg)</h3>
+        <h3 className="tarifa-seccion">{tt.seccionMaterial}</h3>
         <div className="tarifa-grupo">
-          {FAMILIAS.map((f) => (
+          {familiasOpciones(t).map((f) => (
             <CampoNumerico
               key={f.valor}
               etiqueta={f.etiqueta}
               unidad="€/kg"
               valor={tarifas.precioKgPorFamilia[f.valor]}
-              onCambio={(v) => setTarifas((t) => ({ ...t, precioKgPorFamilia: { ...t.precioKgPorFamilia, [f.valor]: v } }))}
+              onCambio={(v) => setTarifas((tf) => ({ ...tf, precioKgPorFamilia: { ...tf.precioKgPorFamilia, [f.valor]: v } }))}
             />
           ))}
         </div>
 
-        <h3 className="tarifa-seccion">Chapa / corte</h3>
+        <h3 className="tarifa-seccion">{tt.seccionChapa}</h3>
         <div className="tarifa-grupo">
           <CampoNumerico
-            etiqueta="Corte por metro a 1 mm de espesor"
+            etiqueta={tt.corteMetro}
             unidad="€/m"
             valor={tarifas.costeCortePorMetroA1mm}
-            onCambio={(v) => setTarifas((t) => ({ ...t, costeCortePorMetroA1mm: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, costeCortePorMetroA1mm: v }))}
           />
           <CampoNumerico
-            etiqueta="Agujero (chapa/punzonado)"
+            etiqueta={tt.agujeroChapa}
             unidad="€/ud"
             valor={tarifas.costePorAgujeroChapa}
-            onCambio={(v) => setTarifas((t) => ({ ...t, costePorAgujeroChapa: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, costePorAgujeroChapa: v }))}
           />
           <CampoNumerico
-            etiqueta="Pliegue"
+            etiqueta={tt.pliegue}
             unidad="€/ud"
             valor={tarifas.costePorPliegue}
-            onCambio={(v) => setTarifas((t) => ({ ...t, costePorPliegue: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, costePorPliegue: v }))}
           />
           <CampoNumerico
-            etiqueta="Acabado superficial"
+            etiqueta={tt.acabadoM2}
             unidad="€/m²"
             valor={tarifas.costeAcabadoPorM2}
-            onCambio={(v) => setTarifas((t) => ({ ...t, costeAcabadoPorM2: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, costeAcabadoPorM2: v }))}
           />
         </div>
 
-        <h3 className="tarifa-seccion">Mecanizado (torneado / fresado)</h3>
+        <h3 className="tarifa-seccion">{tt.seccionMecanizado}</h3>
         <div className="tarifa-grupo">
           <CampoNumerico
-            etiqueta="Tarifa torno"
+            etiqueta={tt.tarifaTorno}
             unidad="€/min"
             valor={tarifas.tarifaTorneadoPorMin}
-            onCambio={(v) => setTarifas((t) => ({ ...t, tarifaTorneadoPorMin: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, tarifaTorneadoPorMin: v }))}
           />
           <CampoNumerico
-            etiqueta="Tarifa fresadora"
+            etiqueta={tt.tarifaFresadora}
             unidad="€/min"
             valor={tarifas.tarifaFresadoPorMin}
-            onCambio={(v) => setTarifas((t) => ({ ...t, tarifaFresadoPorMin: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, tarifaFresadoPorMin: v }))}
           />
           <CampoNumerico
-            etiqueta="Minutos por cm³ (torneado)"
+            etiqueta={tt.minCm3Torneado}
             unidad="min/cm³"
             valor={tarifas.minutosPorCm3Torneado}
-            onCambio={(v) => setTarifas((t) => ({ ...t, minutosPorCm3Torneado: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, minutosPorCm3Torneado: v }))}
           />
           <CampoNumerico
-            etiqueta="Minutos por cm³ (fresado)"
+            etiqueta={tt.minCm3Fresado}
             unidad="min/cm³"
             valor={tarifas.minutosPorCm3Fresado}
-            onCambio={(v) => setTarifas((t) => ({ ...t, minutosPorCm3Fresado: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, minutosPorCm3Fresado: v }))}
           />
           <CampoNumerico
-            etiqueta="Agujero mecanizado"
+            etiqueta={tt.agujeroMecanizado}
             unidad="€/ud"
             valor={tarifas.costePorAgujeroMecanizado}
-            onCambio={(v) => setTarifas((t) => ({ ...t, costePorAgujeroMecanizado: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, costePorAgujeroMecanizado: v }))}
           />
           <CampoNumerico
-            etiqueta="Rosca"
+            etiqueta={tt.rosca}
             unidad="€/ud"
             valor={tarifas.costePorRosca}
-            onCambio={(v) => setTarifas((t) => ({ ...t, costePorRosca: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, costePorRosca: v }))}
           />
           <CampoNumerico
-            etiqueta="Desperdicio de material en bruto"
-            unidad="factor ×"
+            etiqueta={tt.desperdicio}
+            unidad={tt.unidadFactor}
             valor={tarifas.factorDesperdicioStock}
-            onCambio={(v) => setTarifas((t) => ({ ...t, factorDesperdicioStock: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, factorDesperdicioStock: v }))}
           />
         </div>
 
-        <h3 className="tarifa-seccion">General</h3>
+        <h3 className="tarifa-seccion">{tt.seccionGeneral}</h3>
         <div className="tarifa-grupo">
           <CampoNumerico
-            etiqueta="Preparación / puesta a punto"
+            etiqueta={tt.setup}
             unidad="€/lote"
             valor={tarifas.costeSetup}
-            onCambio={(v) => setTarifas((t) => ({ ...t, costeSetup: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, costeSetup: v }))}
           />
           <CampoNumerico
-            etiqueta="Recargo por tolerancias críticas"
-            unidad="factor ×"
+            etiqueta={tt.recargoTolerancia}
+            unidad={tt.unidadFactor}
             valor={tarifas.recargoToleranciaCritica}
-            onCambio={(v) => setTarifas((t) => ({ ...t, recargoToleranciaCritica: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, recargoToleranciaCritica: v }))}
           />
           <CampoNumerico
-            etiqueta="Margen sobre el total"
-            unidad="factor × (1 = sin margen)"
+            etiqueta={tt.margen}
+            unidad={tt.unidadFactorSinMargen}
             valor={tarifas.margen}
-            onCambio={(v) => setTarifas((t) => ({ ...t, margen: v }))}
+            onCambio={(v) => setTarifas((tf) => ({ ...tf, margen: v }))}
           />
         </div>
 
         <div className="modal__acciones">
           <button className="btn" type="button" onClick={restaurar}>
-            Restaurar valores por defecto
+            {tt.restaurar}
           </button>
           <button className="btn btn--primario" type="button" onClick={guardar}>
-            Guardar
+            {tt.guardar}
           </button>
         </div>
       </div>

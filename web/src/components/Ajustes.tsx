@@ -1,22 +1,27 @@
 import { useState } from 'react';
 import { cargarAjustes, configApi, guardarAjustes, type AjustesApp } from '../ajustes';
-import { presetDe, PROVEEDORES, type IdProveedor } from '../proveedores';
+import type { Idioma, Textos } from '../i18n';
+import { presetDe, presetTextos, PROVEEDORES, type IdProveedor } from '../proveedores';
 
 interface Props {
   serverKey: boolean;
   onCerrar: (ajustes: AjustesApp) => void;
+  t: Textos;
+  idioma: Idioma;
 }
 
-export function Ajustes({ serverKey, onCerrar }: Props) {
+export function Ajustes({ serverKey, onCerrar, t, idioma }: Props) {
   const [ajustes, setAjustes] = useState<AjustesApp>(() => cargarAjustes());
   const [verClave, setVerClave] = useState(false);
   const [probando, setProbando] = useState(false);
   const [prueba, setPrueba] = useState<{ ok: boolean; msg: string } | null>(null);
+  const a = t.ajustes;
 
   const preset = presetDe(ajustes.proveedor);
+  const textosPreset = presetTextos(ajustes.proveedor, t);
 
   const cambiar = (parcial: Partial<AjustesApp>) => {
-    setAjustes((a) => ({ ...a, ...parcial }));
+    setAjustes((ai) => ({ ...ai, ...parcial }));
     setPrueba(null);
   };
 
@@ -47,16 +52,12 @@ export function Ajustes({ serverKey, onCerrar }: Props) {
       const res = await fetch('/api/test-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config: configApi(ajustes) }),
+        body: JSON.stringify({ config: configApi(ajustes, idioma) }),
       });
       const cuerpo = await res.json().catch(() => null);
-      setPrueba(
-        res.ok
-          ? { ok: true, msg: 'Conexión correcta con el proveedor.' }
-          : { ok: false, msg: cuerpo?.error ?? `Error ${res.status} probando la conexión.` }
-      );
+      setPrueba(res.ok ? { ok: true, msg: a.conexionOk } : { ok: false, msg: cuerpo?.error ?? a.errorConexion(res.status) });
     } catch {
-      setPrueba({ ok: false, msg: 'No se pudo contactar con el servidor de la app.' });
+      setPrueba({ ok: false, msg: a.errorServidor });
     } finally {
       setProbando(false);
     }
@@ -64,29 +65,25 @@ export function Ajustes({ serverKey, onCerrar }: Props) {
 
   return (
     <div className="modal-fondo" onClick={() => onCerrar(cargarAjustes())}>
-      <div className="modal" role="dialog" aria-label="Ajustes de la API" onClick={(e) => e.stopPropagation()}>
-        <h2>Ajustes de la API</h2>
+      <div className="modal" role="dialog" aria-label={t.app.tituloAjustes} onClick={(e) => e.stopPropagation()}>
+        <h2>{t.app.botonAjustes}</h2>
 
         <label className="modal__label" htmlFor="ajuste-proveedor">
-          Proveedor de IA
+          {a.etiquetaProveedor}
         </label>
-        <select
-          id="ajuste-proveedor"
-          value={ajustes.proveedor}
-          onChange={(e) => cambiarProveedor(e.target.value as IdProveedor)}
-        >
+        <select id="ajuste-proveedor" value={ajustes.proveedor} onChange={(e) => cambiarProveedor(e.target.value as IdProveedor)}>
           {PROVEEDORES.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.nombre}
+              {presetTextos(p.id, t).nombre}
             </option>
           ))}
         </select>
-        <p className="modal__nota">{preset.nota}</p>
+        <p className="modal__nota">{textosPreset.nota}</p>
 
         {preset.urlEditable && (
           <>
             <label className="modal__label" htmlFor="ajuste-url">
-              URL base {preset.urlObligatoria ? '(obligatoria)' : ''}
+              {a.etiquetaUrl} {preset.urlObligatoria ? a.obligatoria : ''}
             </label>
             <input
               id="ajuste-url"
@@ -99,37 +96,34 @@ export function Ajustes({ serverKey, onCerrar }: Props) {
         )}
 
         <label className="modal__label" htmlFor="ajuste-clave">
-          Clave de API {preset.claveObligatoria ? '' : '(opcional)'}
+          {a.etiquetaClave} {preset.claveObligatoria ? '' : a.opcional}
         </label>
         <div className="modal__fila-clave">
           <input
             id="ajuste-clave"
             type={verClave ? 'text' : 'password'}
-            placeholder={preset.claveObligatoria ? 'clave del proveedor' : 'vacío si tu servidor no la exige'}
+            placeholder={preset.claveObligatoria ? a.placeholderClaveObligatoria : a.placeholderClaveOpcional}
             value={ajustes.apiKey}
             autoComplete="off"
             onChange={(e) => cambiar({ apiKey: e.target.value })}
           />
           <button className="btn" type="button" onClick={() => setVerClave(!verClave)}>
-            {verClave ? 'Ocultar' : 'Ver'}
+            {verClave ? a.ocultar : a.ver}
           </button>
         </div>
         <p className="modal__nota">
-          {ajustes.proveedor === 'anthropic' && serverKey
-            ? 'El servidor ya tiene una clave de Anthropic; si guardas otra aquí, la tuya tiene prioridad. '
-            : ''}
-          La configuración se guarda solo en este navegador (localStorage) y se envía únicamente a tu servidor de
-          Draw2Quote con cada análisis. No la uses en un equipo compartido.
+          {ajustes.proveedor === 'anthropic' && serverKey ? a.notaServidorConClave : ''}
+          {a.notaPrivacidad}
         </p>
 
         <label className="modal__label" htmlFor="ajuste-modelo">
-          Modelo de análisis {ajustes.proveedor !== 'anthropic' ? '(debe tener visión)' : ''}
+          {a.etiquetaModelo} {ajustes.proveedor !== 'anthropic' ? a.debeVerVision : ''}
         </label>
         <input
           id="ajuste-modelo"
           type="text"
           list="lista-modelos"
-          placeholder="nombre del modelo"
+          placeholder={a.placeholderModelo}
           value={ajustes.modelo}
           onChange={(e) => cambiar({ modelo: e.target.value })}
         />
@@ -139,21 +133,19 @@ export function Ajustes({ serverKey, onCerrar }: Props) {
           ))}
         </datalist>
 
-        {!preset.admitePdf && (
-          <p className="modal__nota">⚠ Este proveedor solo analiza imágenes (PNG/JPG); los PDF requieren Anthropic o Google Gemini.</p>
-        )}
+        {!preset.admitePdf && <p className="modal__nota">{a.avisoSinPdf}</p>}
 
         {prueba && <p className={`modal__prueba ${prueba.ok ? 'modal__prueba--ok' : 'modal__prueba--error'}`}>{prueba.msg}</p>}
 
         <div className="modal__acciones">
           <button className="btn" type="button" onClick={() => cambiar({ apiKey: '' })}>
-            Quitar clave
+            {a.quitarClave}
           </button>
           <button className="btn" type="button" onClick={probar} disabled={probando || faltaUrl || faltaClave}>
-            {probando ? 'Probando…' : 'Probar conexión'}
+            {probando ? a.probando : a.probarConexion}
           </button>
           <button className="btn btn--primario" type="button" onClick={guardar} disabled={faltaUrl}>
-            Guardar
+            {a.guardar}
           </button>
         </div>
       </div>

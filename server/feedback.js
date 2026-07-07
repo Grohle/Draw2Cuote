@@ -41,7 +41,7 @@ function calcularCamposCorregidos(original, final) {
  * evento sirve para un futuro fine-tuning multimodal real; sin ella, solo
  * alimenta las lecciones aprendidas en contexto y la calibración.
  */
-export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveedor, modelo, imagen }) {
+export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveedor, modelo, imagen, idioma }) {
   if (!existsSync(DIR_DATOS)) mkdirSync(DIR_DATOS, { recursive: true });
   const camposCorregidos = calcularCamposCorregidos(extraccionOriginal, extraccionFinal);
   const evento = {
@@ -49,6 +49,7 @@ export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveed
     timestamp: new Date().toISOString(),
     proveedor: proveedor || 'desconocido',
     modelo: modelo || 'desconocido',
+    idioma: idioma === 'en' ? 'en' : 'es',
     extraccion_original: extraccionOriginal,
     extraccion_final: extraccionFinal,
     campos_corregidos: camposCorregidos,
@@ -113,14 +114,40 @@ export function calcularEstadisticas() {
   return { totalAnalisisConFeedback: eventos.length, campos };
 }
 
+const TEXTOS_LECCION = {
+  es: {
+    titulo: (n) => `LECCIONES APRENDIDAS DE CORRECCIONES PREVIAS DE USUARIOS (basado en ${n} análisis revisados con feedback):`,
+    tasaCorreccion: (campo, pct, corregido, visto) =>
+      `- "${campo}" se ha corregido en el ${pct}% de los análisis revisados por usuarios (${corregido}/${visto}). Sé más conservador marcando confianza media o baja en este campo si hay cualquier ambigüedad.`,
+    transicionNull: (campo, valor, veces, total) =>
+      `- "${campo}": cuando devuelves null, los usuarios lo han corregido a "${valor}" en ${veces} de ${total} casos. Antes de devolver null, comprueba si hay indicios suficientes para inferirlo, aunque sea con confianza baja.`,
+    valoresFrecuentes: (campo, familia, lista) =>
+      `- "${campo}" en piezas de familia "${familia}": valores más frecuentes tras corrección humana: ${lista}.`,
+    desconocida: 'desconocida',
+  },
+  en: {
+    titulo: (n) => `LESSONS LEARNED FROM PREVIOUS USER CORRECTIONS (based on ${n} reviewed analyses):`,
+    tasaCorreccion: (campo, pct, corregido, visto) =>
+      `- "${campo}" has been corrected in ${pct}% of analyses reviewed by users (${corregido}/${visto}). Be more conservative marking medium/low confidence on this field if there is any ambiguity.`,
+    transicionNull: (campo, valor, veces, total) =>
+      `- "${campo}": when you return null, users have corrected it to "${valor}" in ${veces} of ${total} cases. Before returning null, check whether there are enough clues to infer it, even at low confidence.`,
+    valoresFrecuentes: (campo, familia, lista) =>
+      `- "${campo}" on parts of family "${familia}": most frequent values after human correction: ${lista}.`,
+    desconocida: 'unknown',
+  },
+};
+
 /**
  * Destila el histórico de correcciones en un bloque de texto para inyectar
  * en el prompt del sistema de la siguiente extracción. Es aprendizaje "en
  * contexto" (sin tocar pesos del modelo): cuantas más correcciones acumula
  * la app, más se afina el comportamiento del modelo en la próxima llamada.
  * Devuelve null si aún no hay datos suficientes para sacar conclusiones fiables.
+ * El texto se genera en el idioma de la petición actual, independientemente
+ * del idioma en que se registrara cada evento de feedback original.
  */
-export function construirLeccionesAprendidas() {
+export function construirLeccionesAprendidas(idioma) {
+  const tx = TEXTOS_LECCION[idioma === 'en' ? 'en' : 'es'];
   const eventos = leerEventos();
   if (eventos.length < MIN_MUESTRAS_LECCION) return null;
 
@@ -130,9 +157,7 @@ export function construirLeccionesAprendidas() {
   const { campos } = calcularEstadisticas();
   const conProblemas = campos.filter((c) => c.vecesVisto >= MIN_MUESTRAS_LECCION && c.tasaCorreccion >= TASA_MINIMA_AVISO);
   for (const c of conProblemas.slice(0, 3)) {
-    lecciones.push(
-      `- "${c.campo}" se ha corregido en el ${Math.round(c.tasaCorreccion * 100)}% de los análisis revisados por usuarios (${c.vecesCorregido}/${c.vecesVisto}). Sé más conservador marcando confianza media o baja en este campo si hay cualquier ambigüedad.`
-    );
+    lecciones.push(tx.tasaCorreccion(c.campo, Math.round(c.tasaCorreccion * 100), c.vecesCorregido, c.vecesVisto));
   }
 
   // 2) Transiciones null -> valor frecuentes en campos categóricos clave.
@@ -149,9 +174,7 @@ export function construirLeccionesAprendidas() {
     }
     const [valorTop, vecesTop] = Object.entries(transiciones).sort((a, b) => b[1] - a[1])[0] ?? [];
     if (valorTop && totalNullCorregido >= 3 && vecesTop / totalNullCorregido >= 0.5) {
-      lecciones.push(
-        `- "${campo}": cuando devuelves null, los usuarios lo han corregido a "${valorTop}" en ${vecesTop} de ${totalNullCorregido} casos. Antes de devolver null, comprueba si hay indicios suficientes para inferirlo, aunque sea con confianza baja.`
-      );
+      lecciones.push(tx.transicionNull(campo, valorTop, vecesTop, totalNullCorregido));
     }
   }
 
@@ -160,7 +183,7 @@ export function construirLeccionesAprendidas() {
     const porFamilia = {};
     for (const ev of eventos) {
       if (!ev.campos_corregidos?.includes(campo)) continue;
-      const familia = valorDe(ev.extraccion_final, 'material_familia') ?? 'desconocida';
+      const familia = valorDe(ev.extraccion_final, 'material_familia') ?? tx.desconocida;
       const valorFinal = valorDe(ev.extraccion_final, campo);
       if (!valorFinal) continue;
       porFamilia[familia] ??= {};
@@ -171,11 +194,11 @@ export function construirLeccionesAprendidas() {
       const total = entradas.reduce((s, [, n]) => s + n, 0);
       if (total >= 3) {
         const lista = entradas.map(([v, n]) => `${v} (${n})`).join(', ');
-        lecciones.push(`- "${campo}" en piezas de familia "${familia}": valores más frecuentes tras corrección humana: ${lista}.`);
+        lecciones.push(tx.valoresFrecuentes(campo, familia, lista));
       }
     }
   }
 
   if (lecciones.length === 0) return null;
-  return `LECCIONES APRENDIDAS DE CORRECCIONES PREVIAS DE USUARIOS (basado en ${eventos.length} análisis revisados con feedback):\n${lecciones.slice(0, MAX_LECCIONES).join('\n')}`;
+  return `${tx.titulo(eventos.length)}\n${lecciones.slice(0, MAX_LECCIONES).join('\n')}`;
 }

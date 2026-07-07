@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
+import type { Textos } from '../i18n';
 import { calcularPresupuesto } from '../presupuesto';
 import type { Tarifas } from '../tarifas';
 import type { Extraccion } from '../tipos';
+import type { SistemaUnidades } from '../unidades';
 
 const euros = (n: number) => n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 
@@ -9,17 +11,20 @@ interface Props {
   datos: Extraccion;
   tarifas: Tarifas;
   onAbrirTarifas: () => void;
+  t: Textos;
+  unidades: SistemaUnidades;
 }
 
-export function Presupuesto({ datos, tarifas, onAbrirTarifas }: Props) {
-  const resultado = useMemo(() => calcularPresupuesto(datos, tarifas), [datos, tarifas]);
+export function Presupuesto({ datos, tarifas, onAbrirTarifas, t, unidades }: Props) {
+  const resultado = useMemo(() => calcularPresupuesto(datos, tarifas, t, unidades), [datos, tarifas, t, unidades]);
+  const p = t.presupuesto;
 
   return (
     <fieldset className="grupo">
-      <legend>💰 Presupuesto estimado</legend>
+      <legend>{p.titulo}</legend>
       {!resultado.calculable ? (
         <p className="presupuesto__incompleto">
-          No se puede estimar todavía: completa{' '}
+          {p.incompleto}{' '}
           {resultado.camposFaltantes.map((c, i) => (
             <strong key={c}>
               {i > 0 && ', '}
@@ -40,11 +45,11 @@ export function Presupuesto({ datos, tarifas, onAbrirTarifas }: Props) {
           </div>
           <div className="presupuesto__total">
             <div>
-              <span>Total del lote</span>
+              <span>{p.totalLote}</span>
               <strong>{euros(resultado.totalLote)}</strong>
             </div>
             <div>
-              <span>Precio unitario</span>
+              <span>{p.precioUnitario}</span>
               <strong>{euros(resultado.precioUnitario)}</strong>
             </div>
           </div>
@@ -56,10 +61,9 @@ export function Presupuesto({ datos, tarifas, onAbrirTarifas }: Props) {
         </>
       )}
       <p className="presupuesto__nota">
-        Estimación orientativa con geometría simplificada y tarifas configurables — no sustituye un presupuesto de
-        nesting real.{' '}
+        {p.nota}{' '}
         <button className="enlace" type="button" onClick={onAbrirTarifas}>
-          Ajustar tarifas
+          {p.ajustarTarifas}
         </button>
       </p>
     </fieldset>

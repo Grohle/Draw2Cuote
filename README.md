@@ -40,13 +40,22 @@ Cada análisis incluye un desglose de **💰 Presupuesto estimado** calculado en
 - Si falta un dato imprescindible para calcular (p. ej. cantidad o espesor), se indica claramente qué falta en vez de asumir un valor.
 - Todas las tarifas (€/kg por familia de material, €/m de corte, €/min de mecanizado, coste por agujero/pliegue/rosca, acabado, preparación, recargos y margen) son **editables en ⚙ 💶 Tarifas** y se guardan en tu navegador — ajústalas a los costes reales de tu taller.
 
-### Aprendizaje continuo con el uso (ML aplicado)
+### Precisión y validaciones automáticas
 
 - El modelo tiene prohibido inventar: si un dato no es legible devuelve `null` y lo explica en *Observaciones*.
 - Todas las dimensiones se normalizan a milímetros.
 - Confianza por campo: cualquier duda se marca `media` o `baja` y la UI la resalta para revisión humana.
 - Validaciones locales: espesores comerciales, coherencia familia↔calidad, rangos razonables, cotas intercambiadas.
 - Helpers en cada campo (icono `?`) con la explicación de qué es y de dónde sale en el plano.
+
+### Idioma y unidades
+
+La cabecera incluye dos selectores: **🌐 ES/EN** cambia todo el texto de la interfaz (campos, ayudas, avisos de validación, presupuesto, mensajes del servidor) y **📐 mm/in** cambia cómo se muestran y editan las dimensiones. Ambos se guardan en el navegador y se recuerdan entre sesiones.
+
+- El dato se almacena siempre en milímetros (y kilogramos para el peso); el sistema de unidades solo afecta a la capa de presentación — al escribir un valor en pulgadas se convierte a mm antes de guardarlo, sin arrastrar redondeos en el valor almacenado.
+- El presupuesto estimado da el mismo total en € independientemente de la unidad mostrada: solo cambia el texto de las líneas (p. ej. "Material (4.03 lb × ...)" en vez de "Material (1.83 kg × ...)").
+- Las tarifas (⚙ 💶 Tarifas) se gestionan siempre en unidades métricas (€/kg, €/m) para no complicar la configuración del taller.
+- El idioma elegido también viaja al servidor con cada análisis: los mensajes de error de la API y los datos de ejemplo del modo demo se sirven en el idioma activo.
 
 ## Puesta en marcha
 

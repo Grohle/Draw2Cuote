@@ -1,22 +1,23 @@
 import type { ReactNode } from 'react';
+import type { Textos } from '../i18n';
 import type { Confianza } from '../tipos';
 
-const TEXTO_CONFIANZA: Record<Confianza, string> = {
-  alta: 'Alta',
-  media: 'Media',
-  baja: 'Baja',
-};
-
-export function ChipConfianza({ confianza, editado }: { confianza: Confianza; editado?: boolean }) {
+export function ChipConfianza({ confianza, editado, t }: { confianza: Confianza; editado?: boolean; t: Textos }) {
+  const textoConfianza: Record<Confianza, string> = {
+    alta: t.campo.confianzaAlta,
+    media: t.campo.confianzaMedia,
+    baja: t.campo.confianzaBaja,
+  };
   if (editado) {
-    return <span className="chip chip--revisado" title="Valor corregido a mano">✓ Revisado</span>;
+    return (
+      <span className="chip chip--revisado" title={t.campo.tituloRevisado}>
+        {t.campo.revisado}
+      </span>
+    );
   }
   return (
-    <span
-      className={`chip chip--${confianza}`}
-      title={`Confianza de la lectura automática: ${TEXTO_CONFIANZA[confianza].toLowerCase()}`}
-    >
-      {TEXTO_CONFIANZA[confianza]}
+    <span className={`chip chip--${confianza}`} title={t.campo.tituloConfianza(textoConfianza[confianza].toLowerCase())}>
+      {textoConfianza[confianza]}
     </span>
   );
 }
@@ -27,11 +28,12 @@ interface CampoProps {
   confianza: Confianza;
   editado?: boolean;
   avisos: string[];
+  t: Textos;
   children: ReactNode;
 }
 
 /** Envoltorio de campo: etiqueta + ayuda "?" + chip de confianza + avisos */
-export function Campo({ etiqueta, ayuda, confianza, editado, avisos, children }: CampoProps) {
+export function Campo({ etiqueta, ayuda, confianza, editado, avisos, t, children }: CampoProps) {
   const conAviso = avisos.length > 0;
   return (
     <div className={`campo ${conAviso ? 'campo--aviso' : ''} ${confianza === 'baja' && !editado ? 'campo--dudoso' : ''}`}>
@@ -42,7 +44,7 @@ export function Campo({ etiqueta, ayuda, confianza, editado, avisos, children }:
             ?<span className="ayuda__texto">{ayuda}</span>
           </span>
         </label>
-        <ChipConfianza confianza={confianza} editado={editado} />
+        <ChipConfianza confianza={confianza} editado={editado} t={t} />
       </div>
       {children}
       {avisos.map((a, i) => (

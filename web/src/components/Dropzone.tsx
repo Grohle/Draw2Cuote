@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import type { Textos } from '../i18n';
 
 const TIPOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const MAX_BYTES = 32 * 1024 * 1024;
@@ -14,20 +15,21 @@ interface Props {
   archivo: ArchivoPlano | null;
   onArchivo: (a: ArchivoPlano) => void;
   onError: (msg: string) => void;
+  t: Textos;
 }
 
-export function Dropzone({ archivo, onArchivo, onError }: Props) {
+export function Dropzone({ archivo, onArchivo, onError, t }: Props) {
   const [arrastrando, setArrastrando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const procesar = useCallback(
     (file: File) => {
       if (!TIPOS.includes(file.type)) {
-        onError(`Formato no admitido (${file.type || 'desconocido'}). Arrastra un PDF, PNG, JPG, WebP o GIF.`);
+        onError(t.dropzone.formatoNoAdmitido(file.type || t.dropzone.desconocido));
         return;
       }
       if (file.size > MAX_BYTES) {
-        onError('El archivo supera el límite de 32 MB.');
+        onError(t.dropzone.archivoDemasiadoGrande);
         return;
       }
       const reader = new FileReader();
@@ -36,10 +38,10 @@ export function Dropzone({ archivo, onArchivo, onError }: Props) {
         const dataBase64 = dataUrl.split(',', 2)[1] ?? '';
         onArchivo({ nombre: file.name, mediaType: file.type, dataBase64, dataUrl });
       };
-      reader.onerror = () => onError('No se pudo leer el archivo.');
+      reader.onerror = () => onError(t.dropzone.noSePudoLeer);
       reader.readAsDataURL(file);
     },
-    [onArchivo, onError]
+    [onArchivo, onError, t]
   );
 
   return (
@@ -79,10 +81,10 @@ export function Dropzone({ archivo, onArchivo, onError }: Props) {
           {archivo.mediaType === 'application/pdf' ? (
             <embed src={archivo.dataUrl} type="application/pdf" className="dropzone__pdf" />
           ) : (
-            <img src={archivo.dataUrl} alt={`Vista previa de ${archivo.nombre}`} className="dropzone__img" />
+            <img src={archivo.dataUrl} alt={t.dropzone.vistaPreviaDe(archivo.nombre)} className="dropzone__img" />
           )}
           <p className="dropzone__nombre">
-            {archivo.nombre} <span className="dropzone__cambiar">— haz clic para cambiar</span>
+            {archivo.nombre} <span className="dropzone__cambiar">{t.dropzone.cambiar}</span>
           </p>
         </div>
       ) : (
@@ -90,8 +92,8 @@ export function Dropzone({ archivo, onArchivo, onError }: Props) {
           <div className="dropzone__icono" aria-hidden>
             📐
           </div>
-          <p className="dropzone__titulo">Arrastra aquí el plano</p>
-          <p className="dropzone__sub">PDF o imagen (PNG, JPG, WebP) · máx. 32 MB · o haz clic para buscarlo</p>
+          <p className="dropzone__titulo">{t.dropzone.titulo}</p>
+          <p className="dropzone__sub">{t.dropzone.sub}</p>
         </div>
       )}
     </div>
