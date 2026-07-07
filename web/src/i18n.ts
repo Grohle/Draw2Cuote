@@ -122,6 +122,7 @@ const TEXTOS_ES = {
     resumenOk: '✓ Sin incidencias: los datos parecen coherentes y completos.',
     resumenAvisos: (n: number) =>
       `⚠ ${n === 1 ? '1 punto requiere revisión' : `${n} puntos requieren revisión`} antes de presupuestar (marcados abajo).`,
+    unidadesPlano: (imperial: boolean): string => (imperial ? '📐 Plano acotado en pulgadas' : '📐 Plano acotado en mm'),
     grupoIdentificacion: 'Identificación',
     grupoGeometria: 'Geometría',
     grupoMaterial: 'Material y acabado',
@@ -467,6 +468,7 @@ const TEXTOS_EN: Textos = {
     resumenOk: '✓ No issues: the data looks consistent and complete.',
     resumenAvisos: (n: number) =>
       `⚠ ${n === 1 ? '1 point needs review' : `${n} points need review`} before quoting (flagged below).`,
+    unidadesPlano: (imperial: boolean): string => (imperial ? '📐 Drawing dimensioned in inches' : '📐 Drawing dimensioned in mm'),
     grupoIdentificacion: 'Identification',
     grupoGeometria: 'Geometry',
     grupoMaterial: 'Material & finish',

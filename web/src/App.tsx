@@ -172,6 +172,10 @@ export default function App() {
       // copia independiente: "datos" se mutará con las correcciones del usuario
       setDatosOriginales(JSON.parse(JSON.stringify(datosNormalizados)));
       setDemo(respuesta.demo);
+      // si el plano trae un sistema de unidades detectado, ajusta la vista a él
+      if (datosNormalizados.sistema_unidades && datosNormalizados.sistema_unidades !== unidades) {
+        cambiarUnidades(datosNormalizados.sistema_unidades);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error inesperado analizando el plano.');
     } finally {

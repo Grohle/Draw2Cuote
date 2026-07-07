@@ -53,6 +53,12 @@ export const EsquemaExtraccion = z.object({
   num_pliegues: campoNumero('Número de pliegues o dobleces. Solo aplica a chapa plegada; en otros tipos devuelve null.'),
   num_agujeros: campoNumero('Número total de agujeros/taladros visibles o indicados.'),
   roscas: campoTexto('Roscas indicadas, con métrica y cantidad si es posible (p. ej. "M4 (x1), M6 (x4)"). null si no hay.'),
+  sistema_unidades: z
+    .enum(['metrico', 'imperial'])
+    .nullable()
+    .describe(
+      'Sistema de unidades EN EL QUE ESTÁ ACOTADO EL PLANO: "metrico" si las cotas están en milímetros (cajetín "Unit: mm/mm", sin comillas de pulgada), "imperial" si están en pulgadas (Unit: in/inch, símbolo " o cotas fraccionarias tipo 1-1/2"). IMPORTANTE: independientemente de esto, DEVUELVE SIEMPRE todas las dimensiones convertidas a milímetros. null solo si el plano no permite determinarlo.'
+    ),
   desarrollo: z
     .object({
       lados_mm: z
@@ -84,4 +90,6 @@ export const EsquemaExtraccion = z.object({
 });
 
 /** Nombres de los campos escalares de la extracción (los de tipo { valor, confianza }). */
-export const CAMPOS = Object.keys(EsquemaExtraccion.shape).filter((c) => c !== 'observaciones' && c !== 'desarrollo');
+export const CAMPOS = Object.keys(EsquemaExtraccion.shape).filter(
+  (c) => c !== 'observaciones' && c !== 'desarrollo' && c !== 'sistema_unidades'
+);
