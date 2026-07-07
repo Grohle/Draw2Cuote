@@ -13,6 +13,7 @@ import { Dropzone, type ArchivoPlano } from './components/Dropzone';
 import { type EstadoFeedback, Resultados } from './components/Resultados';
 import { Tarifas as ModalTarifas } from './components/Tarifas';
 import { cargarConfigArchivo, guardarConfigArchivo, sinPreferenciasLocales } from './configArchivo';
+import { cargarDesplegado, guardarDesplegado, type OpcionesDesplegado } from './desplegado';
 import { cargarIdioma, guardarIdioma, obtenerTextos, type Idioma } from './i18n';
 import { presetDe, presetTextos } from './proveedores';
 import { cargarTarifas, guardarTarifas, type Tarifas } from './tarifas';
@@ -35,6 +36,7 @@ export default function App() {
   const [idioma, setIdioma] = useState<Idioma>(() => cargarIdioma());
   const [unidades, setUnidades] = useState<SistemaUnidades>(() => cargarUnidades());
   const [camposPersonalizados, setCamposPersonalizados] = useState<CamposPersonalizados>(() => cargarCamposPersonalizados());
+  const [desplegado, setDesplegado] = useState<OpcionesDesplegado>(() => cargarDesplegado());
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [calibracionAbierta, setCalibracionAbierta] = useState(false);
   const [tarifasAbiertas, setTarifasAbiertas] = useState(false);
@@ -79,6 +81,10 @@ export default function App() {
             setCamposPersonalizados(cfg.camposPersonalizados);
             guardarCamposPersonalizados(cfg.camposPersonalizados);
           }
+          if (cfg.desplegado) {
+            setDesplegado(cfg.desplegado);
+            guardarDesplegado(cfg.desplegado);
+          }
           if (cfg.ajustes) {
             const fusion = { ...cargarAjustes(), ...cfg.ajustes };
             setAjustes(fusion);
@@ -104,8 +110,9 @@ export default function App() {
       ajustes: { proveedor: ajustes.proveedor, baseUrl: ajustes.baseUrl, modelo: ajustes.modelo },
       tarifas,
       camposPersonalizados,
+      desplegado,
     });
-  }, [hidratado, idioma, unidades, ajustes, tarifas, camposPersonalizados]);
+  }, [hidratado, idioma, unidades, ajustes, tarifas, camposPersonalizados, desplegado]);
 
   const preset = presetDe(ajustes.proveedor);
   const nombreProveedor = presetTextos(ajustes.proveedor, t).nombre;
@@ -125,6 +132,11 @@ export default function App() {
   const cambiarCamposPersonalizados = (nuevos: CamposPersonalizados) => {
     setCamposPersonalizados(nuevos);
     guardarCamposPersonalizados(nuevos);
+  };
+
+  const cambiarDesplegado = (nuevo: OpcionesDesplegado) => {
+    setDesplegado(nuevo);
+    guardarDesplegado(nuevo);
   };
 
   const analizar = async () => {
@@ -305,6 +317,8 @@ export default function App() {
               idioma={idioma}
               unidades={unidades}
               camposPersonalizados={camposPersonalizados}
+              opcionesDesplegado={desplegado}
+              onCambioDesplegado={cambiarDesplegado}
             />
           ) : (
             <div className="vacio">

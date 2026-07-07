@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { etiquetaDe, type CamposPersonalizados } from '../camposPersonalizados';
 import { acabadosSugeridos, campoAplica, CALIDADES, ESPESORES_ESTANDAR, familiasOpciones, tiposPiezaOpciones, TOLERANCIAS } from '../catalogo';
+import type { OpcionesDesplegado } from '../desplegado';
 import type { Idioma, Textos } from '../i18n';
 import type { Tarifas } from '../tarifas';
 import type { Aviso, Extraccion, FamiliaMaterial, TipoPieza } from '../tipos';
 import { etiquetaLongitud, listaLongitudMostrada, mmAUnidadMostrada, unidadMostradaAMm, type SistemaUnidades } from '../unidades';
 import { validar } from '../validaciones';
 import { Campo } from './Campo';
+import { Desarrollo } from './Desarrollo';
 import { Presupuesto } from './Presupuesto';
 
 export type EstadoFeedback = 'inactivo' | 'guardando' | 'guardado' | 'error';
@@ -26,6 +28,8 @@ interface Props {
   idioma: Idioma;
   unidades: SistemaUnidades;
   camposPersonalizados: CamposPersonalizados;
+  opcionesDesplegado: OpcionesDesplegado;
+  onCambioDesplegado: (o: OpcionesDesplegado) => void;
 }
 
 type ClaveCampo = Exclude<keyof Extraccion, 'observaciones'>;
@@ -46,6 +50,8 @@ export function Resultados({
   idioma,
   unidades,
   camposPersonalizados,
+  opcionesDesplegado,
+  onCambioDesplegado,
 }: Props) {
   const avisos = useMemo(() => validar(datos, t, unidades), [datos, t, unidades]);
   const avisosDe = (campo: keyof Extraccion) => avisos.filter((a) => a.campo === campo).map((a) => a.mensaje);
@@ -245,6 +251,10 @@ export function Resultados({
           {campoTexto('roscas', et('roscas', t.campos.roscas))}
         </div>
       </fieldset>
+
+      {tipo === 'chapa_plegada' && (datos.num_pliegues.valor ?? 0) >= 1 && (
+        <Desarrollo datos={datos} unidades={unidades} opciones={opcionesDesplegado} onCambioOpciones={onCambioDesplegado} t={t} />
+      )}
 
       <Presupuesto datos={datos} tarifas={tarifas} onAbrirTarifas={onAbrirTarifas} t={t} unidades={unidades} />
 

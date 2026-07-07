@@ -24,9 +24,17 @@ Los datos que extrae la app son fijos (espesor, material, cantidad…), pero el 
 - **Renombrar** cómo se muestra en la interfaz (p. ej. "Marca" → "Posición").
 - Añadir los **alias** (rótulos reales de tus planos, separados por comas). Esos alias se envían al lector dentro del prompt de sistema para que sepa dónde mirar, **sin cambiar el esquema de datos**: los campos canónicos siguen siendo los mismos, solo se le enseña al modelo qué etiquetas equivalen a cada uno.
 
+### Desarrollo (desplegado) de chapa
+
+Cuando la pieza es **chapa plegada con al menos un pliegue**, los resultados incluyen un panel **📐 Desarrollo de chapa** que estima el despliegue **a × b** con la **fibra neutra** por defecto:
+
+- `BA (bend allowance) = ángulo · (R + K·espesor)`, `BD = 2·(R+espesor)·tan(ángulo/2) − BA`.
+- El **factor K** (posición de la fibra neutra) se estima por defecto a partir de R/espesor, o se fija manualmente. El **método**, el **radio interior** y el **ángulo de doblado** son configurables en el propio panel y se guardan automáticamente.
+- El desarrollo = suma de los tramos rectos + el arco de cada pliegue. Es una estimación: el desarrollo exacto depende de la longitud de cada tramo, que el plano no siempre especifica (se indica en el panel).
+
 ### Configuración guardada automáticamente
 
-Cualquier cambio de configuración (idioma, unidades, proveedor/modelo, tarifas, nombres y alias de campos) se guarda **automáticamente** en un único JSON en el servidor (`server/datos/config.json`, ignorado por git y con escritura atómica), además de en el navegador. En un equipo nuevo — o en la futura versión de escritorio — la app rehidrata esa configuración desde el archivo al arrancar. La clave de API **no** se guarda en ese archivo: es una credencial y se queda solo en el navegador.
+Cualquier cambio de configuración (idioma, unidades, proveedor/modelo, tarifas, nombres y alias de campos, opciones de desarrollo de chapa) se guarda **automáticamente** en un único JSON en el servidor (`server/datos/config.json`, ignorado por git y con escritura atómica), además de en el navegador. En un equipo nuevo — o en la futura versión de escritorio — la app rehidrata esa configuración desde el archivo al arrancar. La clave de API **no** se guarda en ese archivo: es una credencial y se queda solo en el navegador.
 
 ### Aprendizaje continuo con el uso (ML aplicado)
 

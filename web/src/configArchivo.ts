@@ -1,5 +1,6 @@
 import type { AjustesApp } from './ajustes';
 import type { CamposPersonalizados } from './camposPersonalizados';
+import type { OpcionesDesplegado } from './desplegado';
 import type { Idioma } from './i18n';
 import type { Tarifas } from './tarifas';
 import type { SistemaUnidades } from './unidades';
@@ -17,6 +18,7 @@ export interface ConfigCompleta {
   ajustes: Omit<AjustesApp, 'apiKey'>;
   tarifas: Tarifas;
   camposPersonalizados: CamposPersonalizados;
+  desplegado: OpcionesDesplegado;
 }
 
 let temporizador: ReturnType<typeof setTimeout> | undefined;
