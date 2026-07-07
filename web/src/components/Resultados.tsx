@@ -34,6 +34,8 @@ interface Props {
 
 type ClaveCampo = Exclude<keyof Extraccion, 'observaciones'>;
 const DECIMALES_MOSTRADOS: Record<SistemaUnidades, number> = { metrico: 3, imperial: 4 };
+/** Campo por defecto si faltara en los datos: evita que un esquema inesperado deje la app en blanco. */
+const CAMPO_VACIO = { valor: null, confianza: 'media' as const };
 
 export function Resultados({
   datos,
@@ -72,7 +74,7 @@ export function Resultados({
     onCambio({ ...datos, [clave]: { valor: mm, confianza: datos[clave].confianza, editado: true } });
 
   const campoTexto = (clave: ClaveCampo, etiqueta: string, lista?: string[]) => {
-    const campo = datos[clave];
+    const campo = datos[clave] ?? CAMPO_VACIO;
     return (
       <Campo etiqueta={etiqueta} ayuda={t.ayudas[clave]} confianza={campo.confianza} editado={campo.editado} avisos={avisosDe(clave)} t={t}>
         <input
@@ -94,7 +96,7 @@ export function Resultados({
   };
 
   const campoNumero = (clave: ClaveCampo, etiqueta: string, unidad?: string) => {
-    const campo = datos[clave];
+    const campo = datos[clave] ?? CAMPO_VACIO;
     return (
       <Campo etiqueta={unidad ? `${etiqueta} (${unidad})` : etiqueta} ayuda={t.ayudas[clave]} confianza={campo.confianza} editado={campo.editado} avisos={avisosDe(clave)} t={t}>
         <input
@@ -110,7 +112,7 @@ export function Resultados({
 
   /** Campo de dimensión: el valor se guarda siempre en mm; se muestra y edita en la unidad elegida. */
   const campoLongitud = (clave: ClaveCampo, etiqueta: string, listaMm?: number[]) => {
-    const campo = datos[clave];
+    const campo = datos[clave] ?? CAMPO_VACIO;
     const mm = campo.valor as number | null;
     const mostrado = mm == null ? '' : Number(mmAUnidadMostrada(mm, unidades).toFixed(DECIMALES_MOSTRADOS[unidades]));
     const lista = listaMm ? listaLongitudMostrada(listaMm, unidades) : undefined;

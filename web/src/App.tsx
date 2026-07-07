@@ -15,6 +15,7 @@ import { Tarifas as ModalTarifas } from './components/Tarifas';
 import { cargarConfigArchivo, guardarConfigArchivo, sinPreferenciasLocales } from './configArchivo';
 import { cargarDesplegado, guardarDesplegado, type OpcionesDesplegado } from './desplegado';
 import { cargarIdioma, guardarIdioma, obtenerTextos, type Idioma } from './i18n';
+import { normalizarExtraccion } from './normalizar';
 import { presetDe, presetTextos } from './proveedores';
 import { cargarTarifas, guardarTarifas, type Tarifas } from './tarifas';
 import type { Extraccion, RespuestaExtraccion } from './tipos';
@@ -164,9 +165,12 @@ export default function App() {
         throw new Error(cuerpo?.error ?? `Error ${res.status} del servidor.`);
       }
       const respuesta = cuerpo as RespuestaExtraccion;
-      setDatos(respuesta.datos);
+      // normaliza por si el backend/proveedor devuelve un esquema distinto: así
+      // un campo ausente no revienta el render (la app quedaría en blanco)
+      const datosNormalizados = normalizarExtraccion(respuesta.datos);
+      setDatos(datosNormalizados);
       // copia independiente: "datos" se mutará con las correcciones del usuario
-      setDatosOriginales(JSON.parse(JSON.stringify(respuesta.datos)));
+      setDatosOriginales(JSON.parse(JSON.stringify(datosNormalizados)));
       setDemo(respuesta.demo);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error inesperado analizando el plano.');
