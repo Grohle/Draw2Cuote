@@ -33,6 +33,7 @@ Reglas estrictas para evitar lecturas erróneas:
 - Si dos cotas se contradicen, elige la del cajetín o la más repetida, marca confianza "baja" y añade una observación.
 - Marca confianza "media" o "baja" siempre que haya la más mínima duda; es preferible que un humano revise a dar un dato erróneo por bueno.
 - En material_calidad transcribe el texto literal del plano; no lo normalices.
+- Los campos de identificación (numero_plano, proyecto, denominacion, marca, revision) aparecen con rótulos muy variables según el plano ("nº", "dwg", "title", "mark", "pos", "rev"...). Fíjate en el rótulo del cajetín aunque no coincida exactamente con el nombre del campo, y no confundas la marca/posición de la pieza con el número de plano.
 - Escribe las observaciones en español.`;
 
 const SYSTEM_EN = `You are a technical drafting engineer specialized in sheet metal fabrication and boilermaking.
@@ -52,6 +53,7 @@ Strict rules to avoid incorrect readings:
 - If two dimensions contradict each other, pick the one from the title block or the most repeated one, mark confidence "baja" (low) and add an observation.
 - Mark confidence "media" (medium) or "baja" (low) whenever there is the slightest doubt; it's better for a human to review than to present a wrong value as correct.
 - For material_calidad, transcribe the literal text from the drawing; do not normalize it.
+- The identification fields (numero_plano, proyecto, denominacion, marca, revision) appear under widely varying labels depending on the drawing ("no.", "dwg", "title", "mark", "pos", "rev"...). Read the title-block label even when it doesn't exactly match the field name, and don't confuse the part's mark/position with the drawing number.
 - Write all observations in English.`;
 
 export function sistemaBase(idioma) {
@@ -85,14 +87,35 @@ export const INSTRUCCION = {
 };
 
 /**
- * Prompt de sistema efectivo para esta petición: el prompt base más, si hay
- * feedback humano acumulado suficiente, las lecciones destiladas de
- * correcciones previas de usuarios (aprendizaje en contexto sin reentrenar).
+ * Bloque de alias configurados por el usuario: rótulos concretos con los que
+ * sus planos etiquetan cada campo (p. ej. "title", "dwg", "nº", "mark"). Se
+ * inyecta en el prompt para que el modelo sepa dónde mirar, sin cambiar el
+ * esquema de datos (los campos canónicos son fijos).
  */
-function construirSystemEfectivo(idioma) {
+function bloqueAlias(alias, idioma) {
+  if (!alias || typeof alias !== 'object') return '';
+  const lineas = [];
+  for (const [campo, etiquetas] of Object.entries(alias)) {
+    if (!Array.isArray(etiquetas)) continue;
+    const limpias = etiquetas.map((e) => String(e).trim()).filter(Boolean);
+    if (limpias.length) lineas.push(`- ${campo}: ${limpias.join(', ')}`);
+  }
+  if (!lineas.length) return '';
+  return idioma === 'en'
+    ? `\n\nThis user's drawings label some fields with specific texts. Treat each of these labels as equivalent to the corresponding field (match case-insensitively; the value shown next to such a label is that field's value):\n${lineas.join('\n')}`
+    : `\n\nLos planos de este usuario etiquetan algunos campos con textos concretos. Considera cada una de estas etiquetas equivalente al campo correspondiente (sin distinguir mayúsculas; el valor junto a esa etiqueta es el valor de ese campo):\n${lineas.join('\n')}`;
+}
+
+/**
+ * Prompt de sistema efectivo para esta petición: el prompt base; si hay
+ * feedback humano acumulado suficiente, las lecciones destiladas de
+ * correcciones previas de usuarios (aprendizaje en contexto sin reentrenar);
+ * y los alias de campo configurados por el usuario.
+ */
+function construirSystemEfectivo(idioma, alias) {
   const base = sistemaBase(idioma);
   const lecciones = construirLeccionesAprendidas(idioma);
-  return lecciones ? `${base}\n\n${lecciones}` : base;
+  return `${base}${lecciones ? `\n\n${lecciones}` : ''}${bloqueAlias(alias, idioma)}`;
 }
 
 /** Prueba de conexión según el proveedor configurado. */
@@ -114,14 +137,14 @@ export async function probarProveedor(config) {
   await probarProveedorRemoto(config);
 }
 
-async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idioma }) {
+async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idioma, alias }) {
   const m = mensajes(idioma);
   const client = crearCliente(apiKey);
   const response = await client.messages.parse({
     model: MODELOS_ANTHROPIC.includes(model) ? model : MODELO_DEFECTO,
     max_tokens: 16000,
     thinking: { type: 'adaptive' },
-    system: construirSystemEfectivo(idioma),
+    system: construirSystemEfectivo(idioma, alias),
     messages: [
       {
         role: 'user',
@@ -148,7 +171,7 @@ async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idiom
  * Proveedores sin structured outputs nativos: se incrusta el esquema JSON en
  * el prompt, se pide modo JSON y se valida la respuesta con Zod en el servidor.
  */
-async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model, idioma }) {
+async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model, idioma, alias }) {
   const m = mensajes(idioma);
   if (!model || !model.trim()) {
     const err = new Error(m.indicaModelo);
@@ -176,7 +199,7 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
     baseUrl: resolverBaseUrl(proveedor, baseUrl, idioma),
     apiKey,
     model: model.trim(),
-    system: construirSystemEfectivo(idioma),
+    system: construirSystemEfectivo(idioma, alias),
     instruccion,
     mediaType,
     dataBase64,
@@ -198,7 +221,7 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
 }
 
 export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
-  const { proveedor = 'anthropic', apiKey, baseUrl, modelo, idioma } = config ?? {};
+  const { proveedor = 'anthropic', apiKey, baseUrl, modelo, idioma, alias } = config ?? {};
   if (!esProveedorValido(proveedor)) {
     const err = new Error(mensajes(idioma).proveedorDesconocido(proveedor));
     err.status = 400;
@@ -209,12 +232,12 @@ export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
     if (!apiKey && !hayClaveServidor()) {
       return { demo: true, datos: idioma === 'en' ? DATOS_DEMO_EN : DATOS_DEMO_ES };
     }
-    return { demo: false, datos: await extraerConAnthropic({ mediaType, dataBase64, apiKey, model: modelo, idioma }) };
+    return { demo: false, datos: await extraerConAnthropic({ mediaType, dataBase64, apiKey, model: modelo, idioma, alias }) };
   }
 
   return {
     demo: false,
-    datos: await extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model: modelo, idioma }),
+    datos: await extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model: modelo, idioma, alias }),
   };
 }
 
@@ -222,7 +245,9 @@ export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
 const DATOS_DEMO_ES = {
   tipo_pieza: { valor: 'chapa_plegada', confianza: 'alta' },
   numero_plano: { valor: 'PL-2041-03', confianza: 'alta' },
+  proyecto: { valor: 'OF-2287 Bancada montaje', confianza: 'media' },
   denominacion: { valor: 'Soporte lateral bancada', confianza: 'alta' },
+  marca: { valor: 'P-14', confianza: 'alta' },
   revision: { valor: 'B', confianza: 'alta' },
   largo_mm: { valor: 420, confianza: 'alta' },
   ancho_mm: { valor: 185, confianza: 'alta' },
@@ -248,7 +273,9 @@ const DATOS_DEMO_ES = {
 const DATOS_DEMO_EN = {
   tipo_pieza: { valor: 'chapa_plegada', confianza: 'alta' },
   numero_plano: { valor: 'PL-2041-03', confianza: 'alta' },
+  proyecto: { valor: 'JOB-2287 Assembly bench', confianza: 'media' },
   denominacion: { valor: 'Bench side bracket', confianza: 'alta' },
+  marca: { valor: 'P-14', confianza: 'alta' },
   revision: { valor: 'B', confianza: 'alta' },
   largo_mm: { valor: 420, confianza: 'alta' },
   ancho_mm: { valor: 185, confianza: 'alta' },

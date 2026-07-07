@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { etiquetaDe, type CamposPersonalizados } from '../camposPersonalizados';
 import { acabadosSugeridos, campoAplica, CALIDADES, ESPESORES_ESTANDAR, familiasOpciones, tiposPiezaOpciones, TOLERANCIAS } from '../catalogo';
 import type { Idioma, Textos } from '../i18n';
 import type { Tarifas } from '../tarifas';
@@ -24,6 +25,7 @@ interface Props {
   t: Textos;
   idioma: Idioma;
   unidades: SistemaUnidades;
+  camposPersonalizados: CamposPersonalizados;
 }
 
 type ClaveCampo = Exclude<keyof Extraccion, 'observaciones'>;
@@ -43,10 +45,13 @@ export function Resultados({
   t,
   idioma,
   unidades,
+  camposPersonalizados,
 }: Props) {
   const avisos = useMemo(() => validar(datos, t, unidades), [datos, t, unidades]);
   const avisosDe = (campo: keyof Extraccion) => avisos.filter((a) => a.campo === campo).map((a) => a.mensaje);
   const r = t.resultados;
+  /** Etiqueta a mostrar de un campo: la personalizada por el usuario o la de por defecto. */
+  const et = (clave: ClaveCampo, porDefecto: string) => etiquetaDe(clave, porDefecto, camposPersonalizados);
 
   const setTexto = (clave: ClaveCampo, valor: string) =>
     onCambio({ ...datos, [clave]: { valor: valor === '' ? null : valor, confianza: datos[clave].confianza, editado: true } });
@@ -165,7 +170,7 @@ export function Resultados({
       <fieldset className="grupo">
         <legend>{r.grupoIdentificacion}</legend>
         <div className="grupo__campos">
-          <Campo etiqueta={t.campos.tipo_pieza} ayuda={t.ayudas.tipo_pieza} confianza={datos.tipo_pieza.confianza} editado={datos.tipo_pieza.editado} avisos={avisosDe('tipo_pieza')} t={t}>
+          <Campo etiqueta={et('tipo_pieza', t.campos.tipo_pieza)} ayuda={t.ayudas.tipo_pieza} confianza={datos.tipo_pieza.confianza} editado={datos.tipo_pieza.editado} avisos={avisosDe('tipo_pieza')} t={t}>
             <select
               value={tipo ?? ''}
               onChange={(e) =>
@@ -183,30 +188,32 @@ export function Resultados({
               ))}
             </select>
           </Campo>
-          {campoTexto('numero_plano', t.campos.numero_plano)}
-          {campoTexto('denominacion', t.campos.denominacion)}
-          {campoTexto('revision', t.campos.revision)}
+          {campoTexto('numero_plano', et('numero_plano', t.campos.numero_plano))}
+          {campoTexto('proyecto', et('proyecto', t.campos.proyecto))}
+          {campoTexto('denominacion', et('denominacion', t.campos.denominacion))}
+          {campoTexto('marca', et('marca', t.campos.marca))}
+          {campoTexto('revision', et('revision', t.campos.revision))}
         </div>
       </fieldset>
 
       <fieldset className="grupo">
         <legend>{r.grupoGeometria}</legend>
         <div className="grupo__campos">
-          {campoLongitud('largo_mm', tipo === 'torneado' || tipo === 'tubo_perfil' ? t.campoCorto.largo_torneado : t.campoCorto.largo_chapa)}
-          {aplica('ancho_mm') && campoLongitud('ancho_mm', t.campos.ancho_mm)}
-          {aplica('alto_mm') && campoLongitud('alto_mm', t.campos.alto_mm)}
-          {aplica('diametro_max_mm') && campoLongitud('diametro_max_mm', t.campos.diametro_max_mm)}
+          {campoLongitud('largo_mm', et('largo_mm', tipo === 'torneado' || tipo === 'tubo_perfil' ? t.campoCorto.largo_torneado : t.campoCorto.largo_chapa))}
+          {aplica('ancho_mm') && campoLongitud('ancho_mm', et('ancho_mm', t.campos.ancho_mm))}
+          {aplica('alto_mm') && campoLongitud('alto_mm', et('alto_mm', t.campos.alto_mm))}
+          {aplica('diametro_max_mm') && campoLongitud('diametro_max_mm', et('diametro_max_mm', t.campos.diametro_max_mm))}
           {aplica('espesor_mm') &&
-            campoLongitud('espesor_mm', tipo === 'tubo_perfil' ? t.campoCorto.espesor_tubo : t.campoCorto.espesor, ESPESORES_ESTANDAR)}
-          {campoTexto('tolerancia_general', t.campos.tolerancia_general, TOLERANCIAS)}
-          {campoTexto('tolerancias_criticas', t.campos.tolerancias_criticas)}
+            campoLongitud('espesor_mm', et('espesor_mm', tipo === 'tubo_perfil' ? t.campoCorto.espesor_tubo : t.campoCorto.espesor), ESPESORES_ESTANDAR)}
+          {campoTexto('tolerancia_general', et('tolerancia_general', t.campos.tolerancia_general), TOLERANCIAS)}
+          {campoTexto('tolerancias_criticas', et('tolerancias_criticas', t.campos.tolerancias_criticas))}
         </div>
       </fieldset>
 
       <fieldset className="grupo">
         <legend>{r.grupoMaterial}</legend>
         <div className="grupo__campos">
-          <Campo etiqueta={t.campos.material_familia} ayuda={t.ayudas.material_familia} confianza={familia.confianza} editado={familia.editado} avisos={avisosDe('material_familia')} t={t}>
+          <Campo etiqueta={et('material_familia', t.campos.material_familia)} ayuda={t.ayudas.material_familia} confianza={familia.confianza} editado={familia.editado} avisos={avisosDe('material_familia')} t={t}>
             <select
               value={familia.valor ?? ''}
               onChange={(e) =>
@@ -224,18 +231,18 @@ export function Resultados({
               ))}
             </select>
           </Campo>
-          {campoTexto('material_calidad', t.campos.material_calidad, calidadesSugeridas)}
-          {campoTexto('acabado', t.campos.acabado, acabados)}
+          {campoTexto('material_calidad', et('material_calidad', t.campos.material_calidad), calidadesSugeridas)}
+          {campoTexto('acabado', et('acabado', t.campos.acabado), acabados)}
         </div>
       </fieldset>
 
       <fieldset className="grupo">
         <legend>{r.grupoFabricacion}</legend>
         <div className="grupo__campos">
-          {campoNumero('cantidad', t.campos.cantidad, r.unidadesCantidad)}
-          {aplica('num_pliegues') && campoNumero('num_pliegues', t.campos.num_pliegues)}
-          {campoNumero('num_agujeros', t.campos.num_agujeros)}
-          {campoTexto('roscas', t.campos.roscas)}
+          {campoNumero('cantidad', et('cantidad', t.campos.cantidad), r.unidadesCantidad)}
+          {aplica('num_pliegues') && campoNumero('num_pliegues', et('num_pliegues', t.campos.num_pliegues))}
+          {campoNumero('num_agujeros', et('num_agujeros', t.campos.num_agujeros))}
+          {campoTexto('roscas', et('roscas', t.campos.roscas))}
         </div>
       </fieldset>
 

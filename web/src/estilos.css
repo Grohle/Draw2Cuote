@@ -184,6 +184,58 @@ body {
   width: min(760px, 100%);
 }
 
+/* Editor de campos y alias */
+.campos-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.5rem 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.campos-editor__cabecera,
+.campos-editor__fila {
+  display: grid;
+  grid-template-columns: 9rem 1fr 1.4fr;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.campos-editor__cabecera {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--texto-suave);
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--borde);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+
+.campos-editor__nombre {
+  font-size: 0.9rem;
+  color: var(--texto-suave);
+}
+
+.campos-editor__fila input {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.55rem;
+}
+
+@media (max-width: 640px) {
+  .campos-editor__cabecera {
+    display: none;
+  }
+  .campos-editor__fila {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--borde);
+  }
+}
+
 /* Panel de precisión / calibración */
 .tabla-calibracion {
   display: flex;

@@ -19,7 +19,9 @@ export type TipoPieza = 'chapa_plegada' | 'torneado' | 'fresado' | 'tubo_perfil'
 export interface Extraccion {
   tipo_pieza: Campo<TipoPieza>;
   numero_plano: Campo<string>;
+  proyecto: Campo<string>;
   denominacion: Campo<string>;
+  marca: Campo<string>;
   revision: Campo<string>;
   largo_mm: Campo<number>;
   ancho_mm: Campo<number>;

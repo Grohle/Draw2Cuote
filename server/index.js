@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { EsquemaExtraccion, extraerDatosPlano, hayClaveServidor, probarProveedor } from './extract.js';
 import { calcularEstadisticas, registrarFeedback } from './feedback.js';
+import { leerConfig, guardarConfig } from './config.js';
 import { mensajes } from './mensajes.js';
 
 const PORT = process.env.PORT || 3001;
@@ -105,6 +106,27 @@ app.post('/api/feedback', (req, res) => {
   } catch (err) {
     console.error('[feedback]', err);
     res.status(500).json({ error: m.noGuardoFeedback });
+  }
+});
+
+// Configuración del usuario: se persiste automáticamente en server/datos/config.json.
+app.get('/api/config', (_req, res) => {
+  try {
+    res.json(leerConfig());
+  } catch (err) {
+    console.error('[config:get]', err);
+    res.json({});
+  }
+});
+
+app.put('/api/config', (req, res) => {
+  const config = req.body?.config ?? req.body ?? {};
+  try {
+    guardarConfig(config);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[config:put]', err);
+    res.status(400).json({ error: mensajes(config?.idioma).noGuardoConfig });
   }
 });
 
