@@ -38,13 +38,14 @@ export function guardarAjustes(ajustes: AjustesApp): void {
 }
 
 /** Configuración que viaja al servidor con cada análisis / prueba de conexión */
-export function configApi(ajustes: AjustesApp, idioma: Idioma) {
+export function configApi(ajustes: AjustesApp, idioma: Idioma, alias?: Record<string, string[]>) {
   return {
     proveedor: ajustes.proveedor,
     apiKey: ajustes.apiKey || undefined,
     baseUrl: ajustes.baseUrl || undefined,
     modelo: ajustes.modelo || undefined,
     idioma,
+    alias,
   };
 }
 

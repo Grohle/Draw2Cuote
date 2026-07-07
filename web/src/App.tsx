@@ -1,13 +1,22 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { cargarAjustes, configApi, esModoDemo, type AjustesApp } from './ajustes';
+import { cargarAjustes, configApi, esModoDemo, guardarAjustes, type AjustesApp } from './ajustes';
+import {
+  aliasParaServidor,
+  cargarCamposPersonalizados,
+  guardarCamposPersonalizados,
+  type CamposPersonalizados,
+} from './camposPersonalizados';
 import { Ajustes } from './components/Ajustes';
 import { Calibracion } from './components/Calibracion';
+import { Campos } from './components/Campos';
 import { Dropzone, type ArchivoPlano } from './components/Dropzone';
 import { type EstadoFeedback, Resultados } from './components/Resultados';
 import { Tarifas as ModalTarifas } from './components/Tarifas';
+import { cargarConfigArchivo, guardarConfigArchivo, sinPreferenciasLocales } from './configArchivo';
+import { cargarDesplegado, guardarDesplegado, type OpcionesDesplegado } from './desplegado';
 import { cargarIdioma, guardarIdioma, obtenerTextos, type Idioma } from './i18n';
 import { presetDe, presetTextos } from './proveedores';
-import { cargarTarifas, type Tarifas } from './tarifas';
+import { cargarTarifas, guardarTarifas, type Tarifas } from './tarifas';
 import type { Extraccion, RespuestaExtraccion } from './tipos';
 import { cargarUnidades, guardarUnidades, type SistemaUnidades } from './unidades';
 
@@ -26,14 +35,18 @@ export default function App() {
   const [tarifas, setTarifas] = useState<Tarifas>(() => cargarTarifas());
   const [idioma, setIdioma] = useState<Idioma>(() => cargarIdioma());
   const [unidades, setUnidades] = useState<SistemaUnidades>(() => cargarUnidades());
+  const [camposPersonalizados, setCamposPersonalizados] = useState<CamposPersonalizados>(() => cargarCamposPersonalizados());
+  const [desplegado, setDesplegado] = useState<OpcionesDesplegado>(() => cargarDesplegado());
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [calibracionAbierta, setCalibracionAbierta] = useState(false);
   const [tarifasAbiertas, setTarifasAbiertas] = useState(false);
+  const [camposAbiertos, setCamposAbiertos] = useState(false);
   const [analizando, setAnalizando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estadoFeedback, setEstadoFeedback] = useState<EstadoFeedback>('inactivo');
   const [mensajeFeedback, setMensajeFeedback] = useState<string | null>(null);
   const [incluirImagenFeedback, setIncluirImagenFeedback] = useState(false);
+  const [hidratado, setHidratado] = useState(false);
 
   const t = obtenerTextos(idioma);
 
@@ -43,6 +56,63 @@ export default function App() {
       .then((s) => setServerKey(Boolean(s.serverKey)))
       .catch(() => {});
   }, []);
+
+  // Al arrancar sin preferencias en el navegador (p. ej. equipo nuevo o la
+  // versión de escritorio), rehidrata la configuración desde el JSON guardado.
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      if (sinPreferenciasLocales()) {
+        const cfg = await cargarConfigArchivo();
+        if (!cancelado && cfg) {
+          if (cfg.idioma === 'es' || cfg.idioma === 'en') {
+            setIdioma(cfg.idioma);
+            guardarIdioma(cfg.idioma);
+          }
+          if (cfg.unidades === 'metrico' || cfg.unidades === 'imperial') {
+            setUnidades(cfg.unidades);
+            guardarUnidades(cfg.unidades);
+          }
+          if (cfg.tarifas) {
+            setTarifas(cfg.tarifas);
+            guardarTarifas(cfg.tarifas);
+          }
+          if (cfg.camposPersonalizados) {
+            setCamposPersonalizados(cfg.camposPersonalizados);
+            guardarCamposPersonalizados(cfg.camposPersonalizados);
+          }
+          if (cfg.desplegado) {
+            setDesplegado(cfg.desplegado);
+            guardarDesplegado(cfg.desplegado);
+          }
+          if (cfg.ajustes) {
+            const fusion = { ...cargarAjustes(), ...cfg.ajustes };
+            setAjustes(fusion);
+            guardarAjustes(fusion);
+          }
+        }
+      }
+      if (!cancelado) setHidratado(true);
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  // Guarda automáticamente toda la configuración en el JSON del servidor ante
+  // cualquier cambio (tras la hidratación inicial, para no pisar lo guardado).
+  useEffect(() => {
+    if (!hidratado) return;
+    guardarConfigArchivo({
+      version: 1,
+      idioma,
+      unidades,
+      ajustes: { proveedor: ajustes.proveedor, baseUrl: ajustes.baseUrl, modelo: ajustes.modelo },
+      tarifas,
+      camposPersonalizados,
+      desplegado,
+    });
+  }, [hidratado, idioma, unidades, ajustes, tarifas, camposPersonalizados, desplegado]);
 
   const preset = presetDe(ajustes.proveedor);
   const nombreProveedor = presetTextos(ajustes.proveedor, t).nombre;
@@ -57,6 +127,16 @@ export default function App() {
   const cambiarUnidades = (nuevo: SistemaUnidades) => {
     setUnidades(nuevo);
     guardarUnidades(nuevo);
+  };
+
+  const cambiarCamposPersonalizados = (nuevos: CamposPersonalizados) => {
+    setCamposPersonalizados(nuevos);
+    guardarCamposPersonalizados(nuevos);
+  };
+
+  const cambiarDesplegado = (nuevo: OpcionesDesplegado) => {
+    setDesplegado(nuevo);
+    guardarDesplegado(nuevo);
   };
 
   const analizar = async () => {
@@ -76,7 +156,7 @@ export default function App() {
           filename: archivo.nombre,
           mediaType: archivo.mediaType,
           dataBase64: archivo.dataBase64,
-          config: configApi(ajustes, idioma),
+          config: configApi(ajustes, idioma, aliasParaServidor(camposPersonalizados)),
         }),
       });
       const cuerpo = await res.json().catch(() => null);
@@ -160,6 +240,9 @@ export default function App() {
           <button className="btn btn--ajustes" title={t.app.tituloPrecision} aria-label={t.app.tituloPrecision} onClick={() => setCalibracionAbierta(true)}>
             {t.app.botonPrecision}
           </button>
+          <button className="btn btn--ajustes" title={t.app.tituloCampos} aria-label={t.app.tituloCampos} onClick={() => setCamposAbiertos(true)}>
+            {t.app.botonCampos}
+          </button>
           <button className="btn btn--ajustes" title={t.app.tituloAjustes} aria-label={t.app.tituloAjustes} onClick={() => setAjustesAbiertos(true)}>
             {t.app.botonAjustes}
           </button>
@@ -178,6 +261,14 @@ export default function App() {
         />
       )}
       {calibracionAbierta && <Calibracion onCerrar={() => setCalibracionAbierta(false)} t={t} />}
+      {camposAbiertos && (
+        <Campos
+          camposPersonalizados={camposPersonalizados}
+          onCambio={cambiarCamposPersonalizados}
+          onCerrar={() => setCamposAbiertos(false)}
+          t={t}
+        />
+      )}
       {tarifasAbiertas && (
         <ModalTarifas
           t={t}
@@ -225,6 +316,9 @@ export default function App() {
               t={t}
               idioma={idioma}
               unidades={unidades}
+              camposPersonalizados={camposPersonalizados}
+              opcionesDesplegado={desplegado}
+              onCambioDesplegado={cambiarDesplegado}
             />
           ) : (
             <div className="vacio">

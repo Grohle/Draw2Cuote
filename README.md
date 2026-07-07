@@ -15,6 +15,27 @@
 
 La IA detecta primero el **tipo de pieza** — chapa plegada, torneado, fresado o tubo/perfil — y la UI adapta los campos: una pieza torneada muestra longitud y Ø máximo (sin espesor ni pliegues), la chapa muestra espesor y pliegues, el fresado añade el alto y el tubo pide espesor de pared. Las validaciones también cambian según el tipo. El tipo es editable y el formulario se reconfigura al cambiarlo.
 
+Además de número de plano, denominación y revisión, la extracción incluye la **marca / posición** de la pieza (en muchos despieces es su identificador corto) y el **proyecto / obra** al que pertenece, si figuran en el plano.
+
+### Campos y alias configurables
+
+Los datos que extrae la app son fijos (espesor, material, cantidad…), pero el rótulo con el que cada plano los etiqueta es casi infinito: `title`, `dwg`, `nº`, `no`, `mark`, `pos`… En **🏷 Campos** puedes, por cada campo:
+
+- **Renombrar** cómo se muestra en la interfaz (p. ej. "Marca" → "Posición").
+- Añadir los **alias** (rótulos reales de tus planos, separados por comas). Esos alias se envían al lector dentro del prompt de sistema para que sepa dónde mirar, **sin cambiar el esquema de datos**: los campos canónicos siguen siendo los mismos, solo se le enseña al modelo qué etiquetas equivalen a cada uno.
+
+### Desarrollo (desplegado) de chapa
+
+Cuando la pieza es **chapa plegada con al menos un pliegue**, los resultados incluyen un panel **📐 Desarrollo de chapa** que estima el despliegue **a × b** con la **fibra neutra** por defecto:
+
+- `BA (bend allowance) = ángulo · (R + K·espesor)`, `BD = 2·(R+espesor)·tan(ángulo/2) − BA`.
+- El **factor K** (posición de la fibra neutra) se estima por defecto a partir de R/espesor, o se fija manualmente. El **método**, el **radio interior** y el **ángulo de doblado** son configurables en el propio panel y se guardan automáticamente.
+- El desarrollo = suma de los tramos rectos + el arco de cada pliegue. Es una estimación: el desarrollo exacto depende de la longitud de cada tramo, que el plano no siempre especifica (se indica en el panel).
+
+### Configuración guardada automáticamente
+
+Cualquier cambio de configuración (idioma, unidades, proveedor/modelo, tarifas, nombres y alias de campos, opciones de desarrollo de chapa) se guarda **automáticamente** en un único JSON en el servidor (`server/datos/config.json`, ignorado por git y con escritura atómica), además de en el navegador. En un equipo nuevo — o en la futura versión de escritorio — la app rehidrata esa configuración desde el archivo al arrancar. La clave de API **no** se guarda en ese archivo: es una credencial y se queda solo en el navegador.
+
 ### Aprendizaje continuo con el uso (ML aplicado)
 
 Draw2Quote no se queda quieto tras el primer prompt: cada corrección que un usuario confirma con **🧠 Guardar corrección** se convierte en una señal de entrenamiento que retroalimenta al sistema. El mecanismo, sin necesidad de reentrenar ningún modelo:
@@ -114,3 +135,7 @@ web/             Frontend React + Vite + TypeScript
 ```
 
 Respuesta: `{ "demo": false, "datos": { "espesor_mm": { "valor": 3, "confianza": "alta" }, ... , "observaciones": [] } }`
+
+El `config` de la petición admite `alias` — un mapa `{ campo: ["rótulo1", "rótulo2"] }` con los nombres que los planos del usuario dan a cada campo, que el servidor inyecta en el prompt del lector.
+
+`GET /api/config` · `PUT /api/config` — leen y guardan la configuración del usuario en `server/datos/config.json` (guardado automático desde la UI; la clave de API queda excluida).
