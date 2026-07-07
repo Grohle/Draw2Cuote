@@ -255,6 +255,97 @@ body {
   line-height: 1.45;
 }
 
+.desarrollo__subtitulo {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.desarrollo__lados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.desarrollo__lados input {
+  width: 5.5rem;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.desarrollo__pliegues-tabla {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.6rem;
+}
+
+.desarrollo__pliegue-cab,
+.desarrollo__pliegue-fila {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 1fr 4rem 4rem;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.desarrollo__pliegue-cab {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+}
+
+.desarrollo__pliegue-fila {
+  font-size: 0.88rem;
+}
+
+.desarrollo__pliegue-n {
+  color: var(--texto-suave);
+}
+
+.desarrollo__pliegue-fila input {
+  width: 100%;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.88rem;
+}
+
+.desarrollo__con-origen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.origen {
+  font-size: 0.65rem;
+  font-style: normal;
+  color: var(--texto-suave);
+}
+
+.origen--plano {
+  color: var(--ok);
+}
+
+@media (max-width: 640px) {
+  .desarrollo__pliegue-cab {
+    display: none;
+  }
+  .desarrollo__pliegue-fila {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 0.3rem;
+    border-bottom: 1px solid var(--borde);
+    padding-bottom: 0.4rem;
+  }
+}
+
 /* Editor de campos y alias */
 .campos-editor {
   display: flex;

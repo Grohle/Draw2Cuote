@@ -32,7 +32,7 @@ interface Props {
   onCambioDesplegado: (o: OpcionesDesplegado) => void;
 }
 
-type ClaveCampo = Exclude<keyof Extraccion, 'observaciones'>;
+type ClaveCampo = Exclude<keyof Extraccion, 'observaciones' | 'desarrollo'>;
 const DECIMALES_MOSTRADOS: Record<SistemaUnidades, number> = { metrico: 3, imperial: 4 };
 /** Campo por defecto si faltara en los datos: evita que un esquema inesperado deje la app en blanco. */
 const CAMPO_VACIO = { valor: null, confianza: 'media' as const };
@@ -255,7 +255,7 @@ export function Resultados({
       </fieldset>
 
       {tipo === 'chapa_plegada' && (datos.num_pliegues.valor ?? 0) >= 1 && (
-        <Desarrollo datos={datos} unidades={unidades} opciones={opcionesDesplegado} onCambioOpciones={onCambioDesplegado} t={t} />
+        <Desarrollo datos={datos} onCambio={onCambio} unidades={unidades} opciones={opcionesDesplegado} onCambioOpciones={onCambioDesplegado} t={t} />
       )}
 
       <Presupuesto datos={datos} tarifas={tarifas} onAbrirTarifas={onAbrirTarifas} t={t} unidades={unidades} />
