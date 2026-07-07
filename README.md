@@ -26,11 +26,11 @@ Los datos que extrae la app son fijos (espesor, material, cantidad…), pero el 
 
 ### Desarrollo (desplegado) de chapa
 
-Cuando la pieza es **chapa plegada con al menos un pliegue**, los resultados incluyen un panel **📐 Desarrollo de chapa** que estima el despliegue **a × b** con la **fibra neutra** por defecto:
+Cuando la pieza es **chapa plegada con al menos un pliegue**, el lector extrae del plano la **geometría de plegado** —las longitudes de los **lados** (tramos rectos), y por cada pliegue su **ángulo** y **radio interior**— y el panel **📐 Desarrollo de chapa** calcula el despliegue **a × b**:
 
-- `BA (bend allowance) = ángulo · (R + K·espesor)`, `BD = 2·(R+espesor)·tan(ángulo/2) − BA`.
-- El **factor K** (posición de la fibra neutra) se estima por defecto a partir de R/espesor, o se fija manualmente. El **método**, el **radio interior** y el **ángulo de doblado** son configurables en el propio panel y se guardan automáticamente.
-- El desarrollo = suma de los tramos rectos + el arco de cada pliegue. Es una estimación: el desarrollo exacto depende de la longitud de cada tramo, que el plano no siempre especifica (se indica en el panel).
+- **Desarrollo (a) = Σ lados (cotas exteriores) − Σ bend deduction**, con `BA = ángulo·(R + K·espesor)` y `BD = 2·(R+espesor)·tan(ángulo/2) − BA`. La anchura (b) es la dimensión sin pliegues.
+- Los lados, ángulos y radios se **leen del plano** (de la vista de perfil/sección) y se muestran marcados como **"del plano"**; los que no aparezcan usan los valores por defecto **90°** y **radio = espesor**, marcados como **"por defecto"**. Todo es editable.
+- El **factor K** (posición de la fibra neutra) se estima por R/espesor (fibra neutra) o se fija manual. El método y las correcciones se guardan automáticamente.
 
 ### Configuración guardada automáticamente
 

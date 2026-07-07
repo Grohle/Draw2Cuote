@@ -78,45 +78,81 @@ export function calcularPliegue(
   return { k, radioMm, anguloGrados, baMm, sbMm, bdMm };
 }
 
+/** Cálculo de un pliegue con su ángulo/radio resueltos (del plano o por defecto). */
+export interface PliegueCalc extends CalculoPliegue {
+  indice: number;
+  /** El ángulo venía acotado en el plano (no es el valor por defecto). */
+  anguloExtraido: boolean;
+  /** El radio venía acotado en el plano (no es el valor por defecto). */
+  radioExtraido: boolean;
+}
+
 export interface Desarrollo {
   /** Pieza de chapa con al menos un pliegue: procede calcular desarrollo. */
   aplica: boolean;
   /** Además hay espesor conocido: el cálculo tiene sentido numérico. */
   calculable: boolean;
   numPliegues: number;
-  pliegue: CalculoPliegue | null;
-  /** Largo desarrollado estimado (a), en mm. null si falta el largo. */
+  /** Cálculo por pliegue (uno por doblado). */
+  pliegues: PliegueCalc[];
+  /** Longitudes de los lados (tramos rectos) usadas, en mm. */
+  ladosMm: number[];
+  /** Hay al menos un lado con longitud: se puede sumar el desarrollo. */
+  tieneLados: boolean;
+  /** Suma de bend deductions de todos los pliegues, en mm. */
+  sumaBdMm: number;
+  /** Largo desarrollado (a) = Σ lados − Σ bend deduction, en mm. null si no hay lados. */
   largoDesarrolladoMm: number | null;
-  /** Ancho (b), sin pliegues en ese eje, en mm. null si falta. */
+  /** Ancho (b), sin pliegues en ese eje, en mm. */
   anchoMm: number | null;
 }
 
-/**
- * Desarrollo estimado de la pieza a partir de los datos extraídos y las
- * opciones. Modelo: se asume que el largo indicado corresponde a la suma de
- * los tramos rectos y que los pliegues se reparten a lo largo del largo; el
- * desarrollo = largo + Σ bend allowance. Es una estimación: el desarrollo
- * exacto depende de la longitud de cada tramo, que el plano no siempre da.
- */
-export function calcularDesarrollo(
-  datos: Extraccion,
-  radioMm: number,
-  anguloGrados: number,
+/** Ángulo efectivo de un pliegue: el acotado en el plano, o el valor por defecto. */
+export function anguloDePliegue(p: { angulo_grados: number | null } | undefined, opciones: OpcionesDesplegado): number {
+  return p && p.angulo_grados != null ? p.angulo_grados : opciones.anguloDefecto;
+}
+
+/** Radio interior efectivo de un pliegue: el acotado en el plano, o = espesor·factorRadio. */
+export function radioDePliegue(
+  p: { radio_mm: number | null } | undefined,
+  espesorMm: number | null,
   opciones: OpcionesDesplegado
-): Desarrollo {
-  const numPliegues = datos.num_pliegues.valor ?? 0;
+): number {
+  return p && p.radio_mm != null ? p.radio_mm : radioPorDefecto(espesorMm, opciones);
+}
+
+/**
+ * Desarrollo (desplegado) a partir de la geometría extraída del plano: los
+ * lados (tramos rectos) y, por pliegue, su ángulo y radio interior.
+ *   desarrollo (a) = Σ lados − Σ bend deduction    (cotas exteriores)
+ * Cada pliegue usa su ángulo/radio del plano; si faltan, 90° y radio = espesor.
+ */
+export function calcularDesarrollo(datos: Extraccion, opciones: OpcionesDesplegado): Desarrollo {
+  const numPliegues = datos.num_pliegues.valor ?? datos.desarrollo.pliegues.length;
   const espesor = datos.espesor_mm.valor;
+  const ladosMm = datos.desarrollo.lados_mm;
   const aplica = datos.tipo_pieza.valor === 'chapa_plegada' && numPliegues >= 1;
   const calculable = aplica && espesor != null && espesor > 0;
 
   if (!calculable || espesor == null) {
-    return { aplica, calculable: false, numPliegues, pliegue: null, largoDesarrolladoMm: null, anchoMm: null };
+    return { aplica, calculable: false, numPliegues, pliegues: [], ladosMm, tieneLados: false, sumaBdMm: 0, largoDesarrolladoMm: null, anchoMm: datos.ancho_mm.valor };
   }
 
-  const pliegue = calcularPliegue(espesor, radioMm, anguloGrados, opciones);
-  const largo = datos.largo_mm.valor;
-  const largoDesarrolladoMm = largo == null ? null : largo + numPliegues * pliegue.baMm;
-  return { aplica, calculable: true, numPliegues, pliegue, largoDesarrolladoMm, anchoMm: datos.ancho_mm.valor };
+  const pliegues: PliegueCalc[] = [];
+  for (let i = 0; i < numPliegues; i++) {
+    const p = datos.desarrollo.pliegues[i];
+    const anguloExtraido = !!p && p.angulo_grados != null;
+    const radioExtraido = !!p && p.radio_mm != null;
+    const angulo = anguloDePliegue(p, opciones);
+    const radio = radioDePliegue(p, espesor, opciones);
+    pliegues.push({ indice: i, anguloExtraido, radioExtraido, ...calcularPliegue(espesor, radio, angulo, opciones) });
+  }
+
+  const sumaBdMm = pliegues.reduce((s, p) => s + p.bdMm, 0);
+  const sumaLados = ladosMm.reduce((s, l) => s + l, 0);
+  const tieneLados = sumaLados > 0;
+  const largoDesarrolladoMm = tieneLados ? sumaLados - sumaBdMm : null;
+  return { aplica, calculable: true, numPliegues, pliegues, ladosMm, tieneLados, sumaBdMm, largoDesarrolladoMm, anchoMm: datos.ancho_mm.valor };
 }
 
 /** Radio interior por defecto según las opciones y el espesor. */

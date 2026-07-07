@@ -34,6 +34,7 @@ Reglas estrictas para evitar lecturas erróneas:
 - Marca confianza "media" o "baja" siempre que haya la más mínima duda; es preferible que un humano revise a dar un dato erróneo por bueno.
 - En material_calidad transcribe el texto literal del plano; no lo normalices.
 - Los campos de identificación (numero_plano, proyecto, denominacion, marca, revision) aparecen con rótulos muy variables según el plano ("nº", "dwg", "title", "mark", "pos", "rev"...). Fíjate en el rótulo del cajetín aunque no coincida exactamente con el nombre del campo, y no confundas la marca/posición de la pieza con el número de plano.
+- DESARROLLO (solo chapa plegada): localiza la vista de perfil/sección donde se ve el doblado. En "desarrollo.lados_mm" lista, en orden, las longitudes de los tramos rectos (lados) entre pliegues tal como están acotadas (p. ej. 25.4, 47.6, 95.25); debe haber num_pliegues + 1 lados. En "desarrollo.pliegues" añade un elemento por pliegue con su ángulo (usa 90 si el plano dice que los ángulos no acotados son 90°) y su radio interior (p. ej. una nota "R1.5" o "2xR1.5"; radio null si no aparece). No inventes: si no puedes leer los lados, deja la lista vacía.
 - Escribe las observaciones en español.`;
 
 const SYSTEM_EN = `You are a technical drafting engineer specialized in sheet metal fabrication and boilermaking.
@@ -54,6 +55,7 @@ Strict rules to avoid incorrect readings:
 - Mark confidence "media" (medium) or "baja" (low) whenever there is the slightest doubt; it's better for a human to review than to present a wrong value as correct.
 - For material_calidad, transcribe the literal text from the drawing; do not normalize it.
 - The identification fields (numero_plano, proyecto, denominacion, marca, revision) appear under widely varying labels depending on the drawing ("no.", "dwg", "title", "mark", "pos", "rev"...). Read the title-block label even when it doesn't exactly match the field name, and don't confuse the part's mark/position with the drawing number.
+- FLAT PATTERN (sheet metal only): find the profile/section view that shows the bending. In "desarrollo.lados_mm" list, in order, the straight segment (side) lengths between bends as dimensioned (e.g. 25.4, 47.6, 95.25); there must be num_pliegues + 1 sides. In "desarrollo.pliegues" add one item per bend with its angle (use 90 if the drawing states unmarked angles are 90°) and its inner radius (e.g. a note "R1.5" or "2xR1.5"; radius null if not shown). Do not make it up: if you cannot read the sides, leave the list empty.
 - Write all observations in English.`;
 
 export function sistemaBase(idioma) {
@@ -263,6 +265,13 @@ const DATOS_DEMO_ES = {
   num_pliegues: { valor: 2, confianza: 'media' },
   num_agujeros: { valor: 6, confianza: 'alta' },
   roscas: { valor: null, confianza: 'alta' },
+  desarrollo: {
+    lados_mm: [180, 120, 120],
+    pliegues: [
+      { angulo_grados: 90, radio_mm: 3 },
+      { angulo_grados: 90, radio_mm: 3 },
+    ],
+  },
   observaciones: [
     'MODO DEMO: estos datos son de ejemplo; configura un proveedor en ⚙ Ajustes para analizar planos reales.',
     'El acabado aparece en una nota manuscrita poco legible; confirmar con el cliente.',
@@ -291,6 +300,13 @@ const DATOS_DEMO_EN = {
   num_pliegues: { valor: 2, confianza: 'media' },
   num_agujeros: { valor: 6, confianza: 'alta' },
   roscas: { valor: null, confianza: 'alta' },
+  desarrollo: {
+    lados_mm: [180, 120, 120],
+    pliegues: [
+      { angulo_grados: 90, radio_mm: 3 },
+      { angulo_grados: 90, radio_mm: 3 },
+    ],
+  },
   observaciones: [
     'DEMO MODE: this is sample data; configure a provider in ⚙ Settings to analyze real drawings.',
     'The finish appears in a hard-to-read handwritten note; confirm with the customer.',

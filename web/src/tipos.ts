@@ -37,7 +37,22 @@ export interface Extraccion {
   num_pliegues: Campo<number>;
   num_agujeros: Campo<number>;
   roscas: Campo<string>;
+  desarrollo: DesarrolloGeom;
   observaciones: string[];
+}
+
+export interface PliegueGeom {
+  /** Ángulo de doblado en grados. null si no se leyó del plano. */
+  angulo_grados: number | null;
+  /** Radio interior de doblado en mm. null si no se leyó del plano. */
+  radio_mm: number | null;
+}
+
+export interface DesarrolloGeom {
+  /** Longitudes de los tramos rectos (lados) entre pliegues, en mm y en orden. */
+  lados_mm: number[];
+  /** Geometría por pliegue (ángulo y radio). */
+  pliegues: PliegueGeom[];
 }
 
 export interface RespuestaExtraccion {

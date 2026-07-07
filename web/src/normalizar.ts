@@ -27,9 +27,26 @@ export function normalizarExtraccion(datos: unknown): Extraccion {
     }
   }
 
+  salida.desarrollo = normalizarDesarrollo(fuente.desarrollo);
+
   salida.observaciones = Array.isArray(fuente.observaciones)
     ? (fuente.observaciones as unknown[]).filter((o): o is string => typeof o === 'string')
     : [];
 
   return salida as unknown as Extraccion;
+}
+
+function normalizarDesarrollo(fuente: unknown) {
+  const d = (fuente && typeof fuente === 'object' ? fuente : {}) as Record<string, unknown>;
+  const lados_mm = Array.isArray(d.lados_mm) ? (d.lados_mm as unknown[]).filter((n): n is number => typeof n === 'number') : [];
+  const pliegues = Array.isArray(d.pliegues)
+    ? (d.pliegues as unknown[]).map((p) => {
+        const o = (p && typeof p === 'object' ? p : {}) as Record<string, unknown>;
+        return {
+          angulo_grados: typeof o.angulo_grados === 'number' ? o.angulo_grados : null,
+          radio_mm: typeof o.radio_mm === 'number' ? o.radio_mm : null,
+        };
+      })
+    : [];
+  return { lados_mm, pliegues };
 }

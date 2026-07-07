@@ -53,6 +53,29 @@ export const EsquemaExtraccion = z.object({
   num_pliegues: campoNumero('Número de pliegues o dobleces. Solo aplica a chapa plegada; en otros tipos devuelve null.'),
   num_agujeros: campoNumero('Número total de agujeros/taladros visibles o indicados.'),
   roscas: campoTexto('Roscas indicadas, con métrica y cantidad si es posible (p. ej. "M4 (x1), M6 (x4)"). null si no hay.'),
+  desarrollo: z
+    .object({
+      lados_mm: z
+        .array(z.number())
+        .describe(
+          'SOLO chapa plegada. Longitudes de los tramos rectos (lados) entre pliegues, en orden a lo largo del perfil de plegado, en mm. Léelas de la vista de perfil/sección donde se ve el doblado (p. ej. 25.4, 47.6, 95.25). Debe haber tantos lados como (num_pliegues + 1). Lista vacía si no se pueden leer del plano.'
+        ),
+      pliegues: z
+        .array(
+          z.object({
+            angulo_grados: z
+              .number()
+              .nullable()
+              .describe('Ángulo de doblado del pliegue en grados. Si el plano indica que los ángulos no acotados son 90°, usa 90. null si no se puede determinar.'),
+            radio_mm: z
+              .number()
+              .nullable()
+              .describe('Radio interior de doblado en mm (p. ej. una nota "R1.5" o "2xR1.5"). null si el plano no lo indica.'),
+          })
+        )
+        .describe('SOLO chapa plegada. Un elemento por pliegue con su ángulo y radio interior; tantos como num_pliegues. Lista vacía si no aplica o no se lee.'),
+    })
+    .describe('Geometría de plegado para calcular el desarrollo (desplegado). Solo para chapa plegada; en otros tipos ambas listas van vacías.'),
   observaciones: z
     .array(z.string())
     .describe(
@@ -60,5 +83,5 @@ export const EsquemaExtraccion = z.object({
     ),
 });
 
-/** Nombres de los campos estructurados de la extracción (sin "observaciones", que es una lista). */
-export const CAMPOS = Object.keys(EsquemaExtraccion.shape).filter((c) => c !== 'observaciones');
+/** Nombres de los campos escalares de la extracción (los de tipo { valor, confianza }). */
+export const CAMPOS = Object.keys(EsquemaExtraccion.shape).filter((c) => c !== 'observaciones' && c !== 'desarrollo');
