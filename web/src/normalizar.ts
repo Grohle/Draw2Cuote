@@ -27,6 +27,9 @@ export function normalizarExtraccion(datos: unknown): Extraccion {
     }
   }
 
+  salida.sistema_unidades =
+    fuente.sistema_unidades === 'metrico' || fuente.sistema_unidades === 'imperial' ? fuente.sistema_unidades : null;
+
   salida.desarrollo = normalizarDesarrollo(fuente.desarrollo);
 
   salida.observaciones = Array.isArray(fuente.observaciones)

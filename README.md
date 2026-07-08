@@ -73,6 +73,7 @@ Cada análisis incluye un desglose de **💰 Presupuesto estimado** calculado en
 
 La cabecera incluye dos selectores: **🌐 ES/EN** cambia todo el texto de la interfaz (campos, ayudas, avisos de validación, presupuesto, mensajes del servidor) y **📐 mm/in** cambia cómo se muestran y editan las dimensiones. Ambos se guardan en el navegador y se recuerdan entre sesiones.
 
+- **Detección automática de unidades del plano**: al analizar, el modelo detecta si el plano está acotado en milímetros o en pulgadas y la vista cambia sola al sistema correspondiente (se muestra un distintivo "📐 Plano acotado en mm / en pulgadas"). Las cotas se devuelven siempre en mm y se convierten para mostrarse.
 - El dato se almacena siempre en milímetros (y kilogramos para el peso); el sistema de unidades solo afecta a la capa de presentación — al escribir un valor en pulgadas se convierte a mm antes de guardarlo, sin arrastrar redondeos en el valor almacenado.
 - El presupuesto estimado da el mismo total en € independientemente de la unidad mostrada: solo cambia el texto de las líneas (p. ej. "Material (4.03 lb × ...)" en vez de "Material (1.83 kg × ...)").
 - Las tarifas (⚙ 💶 Tarifas) se gestionan siempre en unidades métricas (€/kg, €/m) para no complicar la configuración del taller.

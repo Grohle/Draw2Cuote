@@ -777,6 +777,27 @@ body {
   font-size: 0.9rem;
 }
 
+.resultados__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.resultados__cabecera .resumen {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.chip-unidades {
+  font-size: 0.75rem;
+  color: var(--acento);
+  border: 1px solid var(--acento);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  white-space: nowrap;
+}
+
 .resumen {
   border-radius: 8px;
   padding: 0.7rem 0.9rem;

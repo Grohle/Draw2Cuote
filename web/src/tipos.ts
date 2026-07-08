@@ -37,6 +37,8 @@ export interface Extraccion {
   num_pliegues: Campo<number>;
   num_agujeros: Campo<number>;
   roscas: Campo<string>;
+  /** Sistema de unidades en que está acotado el plano (las cotas se guardan siempre en mm). */
+  sistema_unidades: 'metrico' | 'imperial' | null;
   desarrollo: DesarrolloGeom;
   observaciones: string[];
 }

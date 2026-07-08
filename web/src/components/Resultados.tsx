@@ -32,7 +32,7 @@ interface Props {
   onCambioDesplegado: (o: OpcionesDesplegado) => void;
 }
 
-type ClaveCampo = Exclude<keyof Extraccion, 'observaciones' | 'desarrollo'>;
+type ClaveCampo = Exclude<keyof Extraccion, 'observaciones' | 'desarrollo' | 'sistema_unidades'>;
 const DECIMALES_MOSTRADOS: Record<SistemaUnidades, number> = { metrico: 3, imperial: 4 };
 /** Campo por defecto si faltara en los datos: evita que un esquema inesperado deje la app en blanco. */
 const CAMPO_VACIO = { valor: null, confianza: 'media' as const };
@@ -173,7 +173,10 @@ export function Resultados({
     <section className="resultados">
       {demo && <div className="banner-demo">{r.bannerDemo}</div>}
 
-      <ResumenAvisos avisos={avisos} t={t} />
+      <div className="resultados__cabecera">
+        <ResumenAvisos avisos={avisos} t={t} />
+        {datos.sistema_unidades && <span className="chip-unidades">{r.unidadesPlano(datos.sistema_unidades === 'imperial')}</span>}
+      </div>
 
       <fieldset className="grupo">
         <legend>{r.grupoIdentificacion}</legend>
