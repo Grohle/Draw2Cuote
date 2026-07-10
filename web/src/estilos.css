@@ -345,6 +345,65 @@ body {
   }
 }
 
+/* Listado de piezas (BOM) */
+.btn__contador {
+  display: inline-block;
+  margin-left: 0.35rem;
+  background: var(--acento);
+  color: #1a1204;
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.listado__scroll {
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.listado__tabla {
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.listado__tabla th,
+.listado__tabla td {
+  border: 1px solid var(--borde);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+}
+
+.listado__tabla th {
+  background: var(--panel-2);
+  color: var(--texto-suave);
+  font-weight: 600;
+}
+
+.listado__quitar {
+  background: none;
+  border: none;
+  color: var(--peligro);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.listado__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 0.6rem;
+  margin-top: 0.3rem;
+  font-size: 1.05rem;
+}
+
+.listado__total strong {
+  color: var(--acento);
+}
+
 /* Editor de campos y alias */
 .campos-editor {
   display: flex;
