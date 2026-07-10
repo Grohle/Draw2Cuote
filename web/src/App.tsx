@@ -33,6 +33,7 @@ export default function App() {
   const [datos, setDatos] = useState<Extraccion | null>(null);
   const [datosOriginales, setDatosOriginales] = useState<Extraccion | null>(null);
   const [demo, setDemo] = useState(false);
+  const [revisado, setRevisado] = useState(false);
   const [serverKey, setServerKey] = useState(false);
   const [ajustes, setAjustes] = useState<AjustesApp>(() => cargarAjustes());
   const [tarifas, setTarifas] = useState<Tarifas>(() => cargarTarifas());
@@ -112,7 +113,7 @@ export default function App() {
       version: 1,
       idioma,
       unidades,
-      ajustes: { proveedor: ajustes.proveedor, baseUrl: ajustes.baseUrl, modelo: ajustes.modelo },
+      ajustes: { proveedor: ajustes.proveedor, baseUrl: ajustes.baseUrl, modelo: ajustes.modelo, revisar: ajustes.revisar },
       tarifas,
       camposPersonalizados,
       desplegado,
@@ -187,6 +188,7 @@ export default function App() {
       // copia independiente: "datos" se mutará con las correcciones del usuario
       setDatosOriginales(JSON.parse(JSON.stringify(datosNormalizados)));
       setDemo(respuesta.demo);
+      setRevisado(Boolean(respuesta.revisado));
       // si el plano trae un sistema de unidades detectado, ajusta la vista a él
       if (datosNormalizados.sistema_unidades && datosNormalizados.sistema_unidades !== unidades) {
         cambiarUnidades(datosNormalizados.sistema_unidades);
@@ -344,6 +346,7 @@ export default function App() {
               datos={datos}
               onCambio={cambiarDatos}
               demo={demo}
+              revisado={revisado}
               onGuardarFeedback={guardarFeedback}
               estadoFeedback={estadoFeedback}
               mensajeFeedback={mensajeFeedback}

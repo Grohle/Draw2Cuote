@@ -17,6 +17,7 @@ interface Props {
   datos: Extraccion;
   onCambio: (datos: Extraccion) => void;
   demo: boolean;
+  revisado: boolean;
   onGuardarFeedback: () => void;
   estadoFeedback: EstadoFeedback;
   mensajeFeedback: string | null;
@@ -42,6 +43,7 @@ export function Resultados({
   datos,
   onCambio,
   demo,
+  revisado,
   onGuardarFeedback,
   estadoFeedback,
   mensajeFeedback,
@@ -178,6 +180,7 @@ export function Resultados({
 
       <div className="resultados__cabecera">
         <ResumenAvisos avisos={avisos} t={t} />
+        {revisado && <span className="chip-unidades chip-unidades--ia">{r.revisadoIA}</span>}
         {datos.sistema_unidades && <span className="chip-unidades">{r.unidadesPlano(datos.sistema_unidades === 'imperial')}</span>}
       </div>
 

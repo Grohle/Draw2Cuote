@@ -6,12 +6,14 @@ export interface AjustesApp {
   apiKey: string;
   baseUrl: string;
   modelo: string;
+  /** Segunda pasada de razonamiento tras el scan (verifica coherencia y revisa lo dudoso). */
+  revisar: boolean;
 }
 
 const CLAVE_STORAGE = 'draw2quote.ajustes';
 
 export function ajustesPorDefecto(): AjustesApp {
-  return { proveedor: 'anthropic', apiKey: '', baseUrl: '', modelo: presetDe('anthropic').modeloDefecto };
+  return { proveedor: 'anthropic', apiKey: '', baseUrl: '', modelo: presetDe('anthropic').modeloDefecto, revisar: true };
 }
 
 export function cargarAjustes(): AjustesApp {
@@ -25,6 +27,7 @@ export function cargarAjustes(): AjustesApp {
         apiKey: p.apiKey ?? '',
         baseUrl: p.baseUrl ?? '',
         modelo: p.modelo ?? presetDe(proveedor).modeloDefecto,
+        revisar: p.revisar !== false, // por defecto activo (migración)
       };
     }
   } catch {
@@ -46,6 +49,7 @@ export function configApi(ajustes: AjustesApp, idioma: Idioma, alias?: Record<st
     modelo: ajustes.modelo || undefined,
     idioma,
     alias,
+    revisar: ajustes.revisar,
   };
 }
 

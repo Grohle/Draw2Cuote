@@ -856,6 +856,11 @@ body {
   white-space: nowrap;
 }
 
+.chip-unidades--ia {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
 .resumen {
   border-radius: 8px;
   padding: 0.7rem 0.9rem;

@@ -92,6 +92,36 @@ export const INSTRUCCION = {
   en: 'Extract the data from this drawing to quote it. Follow the system rules to the letter.',
 };
 
+// Capa de razonamiento posterior al scan: un revisor mira el plano y la primera
+// extracción, comprueba la coherencia de cada campo y re-examina los de
+// confianza media/baja, corrigiendo con evidencia (sin inventar).
+const SYSTEM_REVISION_ES = `Eres un revisor técnico senior de oficina técnica. Recibes un plano y una PRIMERA extracción de datos hecha por otro sistema. Tu tarea es VERIFICARLA y CORREGIRLA mirando el plano:
+- Comprueba la coherencia de cada campo: que el valor encaje con el tipo de pieza, con las demás cotas, con las unidades (todo en mm) y con la plausibilidad física (p. ej. espesor < largo, ancho ≤ largo, radios/ángulos razonables, familia de material coherente con la calidad).
+- Presta ATENCIÓN ESPECIAL a los campos marcados con confianza "media" o "baja": vuelve a leerlos en el plano y confírmalos o corrígelos.
+- Corrige un valor SOLO si el plano lo respalda; NUNCA inventes. Si algo no es legible, deja null.
+- Actualiza la confianza: sube a "alta" solo si ahora es claramente legible/verificable; usa "media"/"baja" si sigue habiendo duda o incoherencia.
+- Por cada cambio que hagas respecto a la primera extracción, añade UNA observación breve con el formato: "campo: <antes> → <después> (motivo)". Conserva las observaciones previas que sigan siendo válidas.
+- Devuelve la extracción COMPLETA ya revisada, en el mismo esquema. Escribe las observaciones en español.`;
+
+const SYSTEM_REVISION_EN = `You are a senior technical reviewer. You receive a drawing and a FIRST data extraction made by another system. Your task is to VERIFY and CORRECT it against the drawing:
+- Check each field for coherence: the value must fit the part type, the other dimensions, the units (all in mm) and physical plausibility (e.g. thickness < length, width ≤ length, reasonable radii/angles, material family consistent with the grade).
+- Pay SPECIAL ATTENTION to fields marked with "media" (medium) or "baja" (low) confidence: read them again on the drawing and confirm or correct them.
+- Correct a value ONLY if the drawing supports it; NEVER make it up. If something isn't legible, leave null.
+- Update the confidence: raise to "alta" only if it's now clearly legible/verifiable; use "media"/"baja" if doubt or inconsistency remains.
+- For each change vs the first extraction, add ONE short observation formatted: "field: <before> → <after> (reason)". Keep previous observations that still hold.
+- Return the FULL revised extraction in the same schema. Write observations in English.`;
+
+function sistemaRevision(idioma) {
+  return idioma === 'en' ? SYSTEM_REVISION_EN : SYSTEM_REVISION_ES;
+}
+
+function instruccionRevision(idioma, previa) {
+  const json = JSON.stringify(previa);
+  return idioma === 'en'
+    ? `Review and correct this first extraction against the drawing. First extraction (JSON):\n${json}`
+    : `Revisa y corrige esta primera extracción comparándola con el plano. Primera extracción (JSON):\n${json}`;
+}
+
 /**
  * Bloque de alias configurados por el usuario: rótulos concretos con los que
  * sus planos etiquetan cada campo (p. ej. "title", "dwg", "nº", "mark"). Se
@@ -143,18 +173,20 @@ export async function probarProveedor(config) {
   await probarProveedorRemoto(config);
 }
 
-async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idioma, alias }) {
+async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idioma, alias, previa }) {
   const m = mensajes(idioma);
   const client = crearCliente(apiKey);
+  const system = previa ? sistemaRevision(idioma) : construirSystemEfectivo(idioma, alias);
+  const texto = previa ? instruccionRevision(idioma, previa) : INSTRUCCION[idioma === 'en' ? 'en' : 'es'];
   const response = await client.messages.parse({
     model: MODELOS_ANTHROPIC.includes(model) ? model : MODELO_DEFECTO,
     max_tokens: 16000,
     thinking: { type: 'adaptive' },
-    system: construirSystemEfectivo(idioma, alias),
+    system,
     messages: [
       {
         role: 'user',
-        content: [bloqueDocumento(mediaType, dataBase64), { type: 'text', text: INSTRUCCION[idioma === 'en' ? 'en' : 'es'] }],
+        content: [bloqueDocumento(mediaType, dataBase64), { type: 'text', text: texto }],
       },
     ],
     output_config: { format: zodOutputFormat(EsquemaExtraccion) },
@@ -177,7 +209,7 @@ async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idiom
  * Proveedores sin structured outputs nativos: se incrusta el esquema JSON en
  * el prompt, se pide modo JSON y se valida la respuesta con Zod en el servidor.
  */
-async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model, idioma, alias }) {
+async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model, idioma, alias, previa }) {
   const m = mensajes(idioma);
   if (!model || !model.trim()) {
     const err = new Error(m.indicaModelo);
@@ -196,7 +228,7 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
   }
 
   const esquemaJson = zodOutputFormat(EsquemaExtraccion).schema;
-  const instruccionBase = INSTRUCCION[idioma === 'en' ? 'en' : 'es'];
+  const instruccionBase = previa ? instruccionRevision(idioma, previa) : INSTRUCCION[idioma === 'en' ? 'en' : 'es'];
   const instruccion =
     idioma === 'en'
       ? `${instruccionBase}\n\nRespond EXCLUSIVELY with a valid JSON object, no markdown or extra text, that exactly matches this JSON Schema:\n${JSON.stringify(esquemaJson)}`
@@ -205,7 +237,7 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
     baseUrl: resolverBaseUrl(proveedor, baseUrl, idioma),
     apiKey,
     model: model.trim(),
-    system: construirSystemEfectivo(idioma, alias),
+    system: previa ? sistemaRevision(idioma) : construirSystemEfectivo(idioma, alias),
     instruccion,
     mediaType,
     dataBase64,
@@ -227,24 +259,38 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
 }
 
 export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
-  const { proveedor = 'anthropic', apiKey, baseUrl, modelo, idioma, alias } = config ?? {};
+  const { proveedor = 'anthropic', apiKey, baseUrl, modelo, idioma, alias, revisar } = config ?? {};
   if (!esProveedorValido(proveedor)) {
     const err = new Error(mensajes(idioma).proveedorDesconocido(proveedor));
     err.status = 400;
     throw err;
   }
 
-  if (proveedor === 'anthropic') {
-    if (!apiKey && !hayClaveServidor()) {
-      return { demo: true, datos: idioma === 'en' ? DATOS_DEMO_EN : DATOS_DEMO_ES };
-    }
-    return { demo: false, datos: await extraerConAnthropic({ mediaType, dataBase64, apiKey, model: modelo, idioma, alias }) };
+  if (proveedor === 'anthropic' && !apiKey && !hayClaveServidor()) {
+    return { demo: true, revisado: false, datos: idioma === 'en' ? DATOS_DEMO_EN : DATOS_DEMO_ES };
   }
 
-  return {
-    demo: false,
-    datos: await extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model: modelo, idioma, alias }),
-  };
+  const comun = { mediaType, dataBase64, apiKey, idioma, alias, model: modelo };
+  const extraer = (extra) =>
+    proveedor === 'anthropic'
+      ? extraerConAnthropic({ ...comun, ...extra })
+      : extraerConGenerico({ proveedor, baseUrl, ...comun, ...extra });
+
+  // Pasada 1: scan del plano.
+  const datos1 = await extraer({});
+  if (revisar === false) {
+    return { demo: false, revisado: false, datos: datos1 };
+  }
+
+  // Pasada 2 (capa de razonamiento): verifica coherencia y re-examina lo dudoso.
+  // Si la segunda pasada falla, se devuelve la primera extracción sin romper la petición.
+  try {
+    const datos2 = await extraer({ previa: datos1 });
+    return { demo: false, revisado: true, datos: datos2 };
+  } catch (err) {
+    console.error('[revision]', err);
+    return { demo: false, revisado: false, datos: datos1 };
+  }
 }
 
 // Datos de ejemplo para poder probar la UI sin credenciales de la API.

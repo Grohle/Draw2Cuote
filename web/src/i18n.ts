@@ -140,6 +140,7 @@ const TEXTOS_ES = {
     resumenAvisos: (n: number) =>
       `⚠ ${n === 1 ? '1 punto requiere revisión' : `${n} puntos requieren revisión`} antes de presupuestar (marcados abajo).`,
     unidadesPlano: (imperial: boolean): string => (imperial ? '📐 Plano acotado en pulgadas' : '📐 Plano acotado en mm'),
+    revisadoIA: '🧠 Revisado por IA',
     grupoIdentificacion: 'Identificación',
     grupoGeometria: 'Geometría',
     grupoMaterial: 'Material y acabado',
@@ -184,6 +185,9 @@ const TEXTOS_ES = {
     probarConexion: 'Probar conexión',
     probando: 'Probando…',
     guardar: 'Guardar',
+    revisar: '🧠 Revisar la extracción (2ª pasada de razonamiento)',
+    revisarNota:
+      'Tras leer el plano, el modelo revisa la coherencia de cada campo y vuelve a mirar los de confianza media/baja para confirmarlos o corregirlos. Mejora la fiabilidad a costa de una segunda llamada (más tiempo y coste).',
     conexionOk: 'Conexión correcta con el proveedor.',
     errorConexion: (status: number) => `Error ${status} probando la conexión.`,
     errorServidor: 'No se pudo contactar con el servidor de la app.',
@@ -523,6 +527,7 @@ const TEXTOS_EN: Textos = {
     resumenAvisos: (n: number) =>
       `⚠ ${n === 1 ? '1 point needs review' : `${n} points need review`} before quoting (flagged below).`,
     unidadesPlano: (imperial: boolean): string => (imperial ? '📐 Drawing dimensioned in inches' : '📐 Drawing dimensioned in mm'),
+    revisadoIA: '🧠 AI-reviewed',
     grupoIdentificacion: 'Identification',
     grupoGeometria: 'Geometry',
     grupoMaterial: 'Material & finish',
@@ -567,6 +572,9 @@ const TEXTOS_EN: Textos = {
     probarConexion: 'Test connection',
     probando: 'Testing…',
     guardar: 'Save',
+    revisar: '🧠 Review the extraction (2nd reasoning pass)',
+    revisarNota:
+      'After reading the drawing, the model checks each field for coherence and re-examines the medium/low-confidence ones to confirm or correct them. Improves reliability at the cost of a second call (more time and cost).',
     conexionOk: 'Connection to the provider succeeded.',
     errorConexion: (status: number) => `Error ${status} testing the connection.`,
     errorServidor: 'Could not reach the app server.',

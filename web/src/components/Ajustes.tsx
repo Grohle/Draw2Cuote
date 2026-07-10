@@ -40,6 +40,7 @@ export function Ajustes({ serverKey, onCerrar, t, idioma }: Props) {
       apiKey: ajustes.apiKey.trim(),
       baseUrl: ajustes.baseUrl.trim(),
       modelo: ajustes.modelo.trim(),
+      revisar: ajustes.revisar,
     };
     guardarAjustes(limpios);
     onCerrar(limpios);
@@ -134,6 +135,12 @@ export function Ajustes({ serverKey, onCerrar, t, idioma }: Props) {
         </datalist>
 
         {!preset.admitePdf && <p className="modal__nota">{a.avisoSinPdf}</p>}
+
+        <label className="modal__check">
+          <input type="checkbox" checked={ajustes.revisar} onChange={(e) => cambiar({ revisar: e.target.checked })} />
+          {a.revisar}
+        </label>
+        <p className="modal__nota">{a.revisarNota}</p>
 
         {prueba && <p className={`modal__prueba ${prueba.ok ? 'modal__prueba--ok' : 'modal__prueba--error'}`}>{prueba.msg}</p>}
 

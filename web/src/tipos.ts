@@ -79,6 +79,8 @@ export interface DesarrolloGeom {
 
 export interface RespuestaExtraccion {
   demo: boolean;
+  /** true si pasó por la segunda pasada de razonamiento (verificación). */
+  revisado?: boolean;
   datos: Extraccion;
 }
 
