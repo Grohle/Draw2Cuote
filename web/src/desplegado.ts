@@ -95,16 +95,31 @@ export interface Desarrollo {
   numPliegues: number;
   /** Cálculo por pliegue (uno por doblado). */
   pliegues: PliegueCalc[];
-  /** Longitudes de los lados (tramos rectos) usadas, en mm. */
-  ladosMm: number[];
+  /** Longitud EXTERIOR de cada lado en mm (la interior se convierte sumando espesores adyacentes). */
+  ladosExterioresMm: number[];
   /** Hay al menos un lado con longitud: se puede sumar el desarrollo. */
   tieneLados: boolean;
   /** Suma de bend deductions de todos los pliegues, en mm. */
   sumaBdMm: number;
-  /** Largo desarrollado (a) = Σ lados − Σ bend deduction, en mm. null si no hay lados. */
+  /** Largo desarrollado (a) = Σ lados exteriores − Σ bend deduction, en mm. null si no hay lados. */
   largoDesarrolladoMm: number | null;
   /** Ancho (b), sin pliegues en ese eje, en mm. */
   anchoMm: number | null;
+}
+
+/** Nº de pliegues que tocan el lado i: los lados de los extremos tienen 1, los intermedios 2. */
+export function pliguesAdyacentes(indiceLado: number, numLados: number): number {
+  return (indiceLado > 0 ? 1 : 0) + (indiceLado < numLados - 1 ? 1 : 0);
+}
+
+/**
+ * Longitud exterior de un lado. Si la cota del plano es interior, se le suma
+ * un espesor por cada pliegue adyacente (una U de espesor 2 con interior 46
+ * mide 46+2+2 = 50 por fuera; una pata con un solo pliegue suma un espesor).
+ */
+export function ladoExteriorMm(lado: { longitud_mm: number; cota_interior: boolean }, indice: number, numLados: number, espesorMm: number): number {
+  if (!lado.cota_interior) return lado.longitud_mm;
+  return lado.longitud_mm + espesorMm * pliguesAdyacentes(indice, numLados);
 }
 
 /** Ángulo efectivo de un pliegue: el acotado en el plano, o el valor por defecto. */
@@ -122,20 +137,22 @@ export function radioDePliegue(
 }
 
 /**
- * Desarrollo (desplegado) a partir de la geometría extraída del plano: los
- * lados (tramos rectos) y, por pliegue, su ángulo y radio interior.
- *   desarrollo (a) = Σ lados − Σ bend deduction    (cotas exteriores)
+ * Desarrollo (desplegado) a partir de la geometría extraída del plano: las
+ * caras (lados) con su cota interior/exterior y, por pliegue, su ángulo y
+ * radio interior.
+ *   desarrollo (a) = Σ lados EXTERIORES − Σ bend deduction
+ * Las cotas interiores se convierten antes a exteriores (ver ladoExteriorMm).
  * Cada pliegue usa su ángulo/radio del plano; si faltan, 90° y radio = espesor.
  */
 export function calcularDesarrollo(datos: Extraccion, opciones: OpcionesDesplegado): Desarrollo {
   const numPliegues = datos.num_pliegues.valor ?? datos.desarrollo.pliegues.length;
   const espesor = datos.espesor_mm.valor;
-  const ladosMm = datos.desarrollo.lados_mm;
+  const lados = datos.desarrollo.lados;
   const aplica = datos.tipo_pieza.valor === 'chapa_plegada' && numPliegues >= 1;
   const calculable = aplica && espesor != null && espesor > 0;
 
   if (!calculable || espesor == null) {
-    return { aplica, calculable: false, numPliegues, pliegues: [], ladosMm, tieneLados: false, sumaBdMm: 0, largoDesarrolladoMm: null, anchoMm: datos.ancho_mm.valor };
+    return { aplica, calculable: false, numPliegues, pliegues: [], ladosExterioresMm: [], tieneLados: false, sumaBdMm: 0, largoDesarrolladoMm: null, anchoMm: datos.ancho_mm.valor };
   }
 
   const pliegues: PliegueCalc[] = [];
@@ -148,11 +165,14 @@ export function calcularDesarrollo(datos: Extraccion, opciones: OpcionesDesplega
     pliegues.push({ indice: i, anguloExtraido, radioExtraido, ...calcularPliegue(espesor, radio, angulo, opciones) });
   }
 
+  const numLados = numPliegues + 1;
+  const ladosExterioresMm = lados.slice(0, numLados).map((l, i) => ladoExteriorMm(l, i, numLados, espesor));
+
   const sumaBdMm = pliegues.reduce((s, p) => s + p.bdMm, 0);
-  const sumaLados = ladosMm.reduce((s, l) => s + l, 0);
+  const sumaLados = ladosExterioresMm.reduce((s, l) => s + l, 0);
   const tieneLados = sumaLados > 0;
   const largoDesarrolladoMm = tieneLados ? sumaLados - sumaBdMm : null;
-  return { aplica, calculable: true, numPliegues, pliegues, ladosMm, tieneLados, sumaBdMm, largoDesarrolladoMm, anchoMm: datos.ancho_mm.valor };
+  return { aplica, calculable: true, numPliegues, pliegues, ladosExterioresMm, tieneLados, sumaBdMm, largoDesarrolladoMm, anchoMm: datos.ancho_mm.valor };
 }
 
 /** Radio interior por defecto según las opciones y el espesor. */

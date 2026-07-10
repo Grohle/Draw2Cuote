@@ -90,10 +90,19 @@ export const EsquemaExtraccion = z.object({
     ),
   desarrollo: z
     .object({
-      lados_mm: z
-        .array(z.number())
+      lados: z
+        .array(
+          z.object({
+            longitud_mm: z.number().describe('Longitud de la cara tal como está acotada en el plano, en mm.'),
+            cota_interior: z
+              .boolean()
+              .describe(
+                'true si la cota mide la cara por el INTERIOR del doblado (entre caras internas, sin incluir el espesor); false si es la medida EXTERIOR. Mira las líneas de cota: si van de cara interna a cara interna es interior. En caso de duda usa false (exterior).'
+              ),
+          })
+        )
         .describe(
-          'SOLO chapa plegada. Longitudes de los tramos rectos (lados) entre pliegues, en orden a lo largo del perfil de plegado, en mm. Léelas de la vista de perfil/sección donde se ve el doblado (p. ej. 25.4, 47.6, 95.25). Debe haber tantos lados como (num_pliegues + 1). Lista vacía si no se pueden leer del plano.'
+          'SOLO chapa plegada. Caras (tramos rectos) del perfil de plegado, en orden a lo largo del perfil, leídas de la vista de perfil/sección (p. ej. 25.4, 47.6, 95.25). Debe haber tantas caras como (num_pliegues + 1). Lista vacía si no se pueden leer del plano.'
         ),
       pliegues: z
         .array(

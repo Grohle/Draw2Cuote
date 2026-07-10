@@ -300,8 +300,8 @@ body {
   font-size: 0.8rem;
 }
 
-.desarrollo__fila input {
-  width: 5rem;
+.desarrollo__fila input,
+.desarrollo__fila select {
   background: var(--fondo);
   border: 1px solid var(--borde);
   color: var(--texto);
@@ -310,15 +310,14 @@ body {
   font-size: 0.88rem;
 }
 
-.desarrollo__con-origen {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
+.desarrollo__fila input {
+  width: 5rem;
 }
 
-.desarrollo__mini {
-  font-size: 0.72rem;
-  color: var(--texto-suave);
+.desarrollo__ext {
+  font-size: 0.8rem;
+  color: var(--acento);
+  white-space: nowrap;
 }
 
 .desarrollo__babd {
@@ -786,6 +785,33 @@ body {
   color: var(--texto-suave);
   font-size: 0.9rem;
   text-align: center;
+}
+
+/* Barra de progreso del análisis, por etapas */
+.progreso {
+  margin-top: 0.8rem;
+}
+
+.progreso__barra {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  overflow: hidden;
+}
+
+.progreso__relleno {
+  height: 100%;
+  background: var(--acento);
+  border-radius: 999px;
+  transition: width 0.25s linear;
+}
+
+.progreso__etapa {
+  margin: 0.4rem 0 0.2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--acento);
 }
 
 .error {

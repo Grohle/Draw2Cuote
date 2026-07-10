@@ -35,7 +35,9 @@ Reglas estrictas para evitar lecturas erróneas:
 - Marca confianza "media" o "baja" siempre que haya la más mínima duda; es preferible que un humano revise a dar un dato erróneo por bueno.
 - En material_calidad transcribe el texto literal del plano; no lo normalices.
 - Los campos de identificación (numero_plano, proyecto, denominacion, marca, revision) aparecen con rótulos muy variables según el plano ("nº", "dwg", "title", "mark", "pos", "rev"...). Fíjate en el rótulo del cajetín aunque no coincida exactamente con el nombre del campo, y no confundas la marca/posición de la pieza con el número de plano.
-- DESARROLLO (solo chapa plegada): es la parte MÁS IMPORTANTE para presupuestar chapa. Localiza la VISTA DE PERFIL/SECCIÓN (la que muestra la pieza doblada de canto, como una línea quebrada). Cada tramo recto de esa línea es una CARA PLEGADA; su cota es un "lado". Recorre el perfil de un extremo al otro y anota en "desarrollo.lados_mm", EN ORDEN, la longitud de cada cara (p. ej. un perfil en Z con caras 25.4, 47.6 y 95.25 → lados_mm = [25.4, 47.6, 95.25]). Debe haber num_pliegues + 1 lados (2 pliegues → 3 lados). Haz todo lo posible por leerlos aunque tengas que deducirlos de las cotas del perfil. En "desarrollo.pliegues" añade un elemento por pliegue con su ángulo (usa 90 si el plano indica que los ángulos no acotados son 90°) y su radio interior (p. ej. "R1.5" o "2xR1.5"; radio null si no aparece). Solo deja lados_mm vacío si de verdad no hay ninguna vista de perfil legible.
+- DESARROLLO (solo chapa plegada): es la parte MÁS IMPORTANTE para presupuestar chapa. Localiza la VISTA DE PERFIL/SECCIÓN (la que muestra la pieza doblada de canto, como una línea quebrada). Cada tramo recto de esa línea es una CARA PLEGADA; su cota es un "lado". Recorre el perfil de un extremo al otro y anota en "desarrollo.lados", EN ORDEN, cada cara con su longitud (p. ej. un perfil en Z con caras 25.4, 47.6 y 95.25 → tres lados). Debe haber num_pliegues + 1 lados (2 pliegues → 3 lados). Haz todo lo posible por leerlos aunque tengas que deducirlos de las cotas del perfil.
+- COTA INTERIOR vs EXTERIOR: fíjate en si cada cota mide la cara por DENTRO o por FUERA del doblado. Si las líneas de cota van entre caras internas (no incluyen el espesor), marca cota_interior = true; si abarcan el exterior, false. Ejemplo: una U de espesor 2 mm con cota interior 46 mm mide 46+2+2 = 50 mm por fuera. Esto cambia el desarrollo, tómalo muy en serio. En caso de duda, false (exterior).
+- En "desarrollo.pliegues" añade un elemento por pliegue con su ángulo (usa 90 si el plano indica que los ángulos no acotados son 90°) y su radio interior (p. ej. "R1.5" o "2xR1.5"; radio null si no aparece). Solo deja lados vacío si de verdad no hay ninguna vista de perfil legible.
 - UNIDADES DEL PLANO: determina en "sistema_unidades" si el plano está acotado en milímetros ("metrico", cajetín "Unit: mm") o en pulgadas ("imperial", "Unit: in/inch", símbolo " o cotas fraccionarias). Aun así, todas las cotas que devuelvas van SIEMPRE en milímetros (convierte las pulgadas: 1" = 25.4 mm).
 - Escribe las observaciones en español.`;
 
@@ -58,7 +60,9 @@ Strict rules to avoid incorrect readings:
 - Mark confidence "media" (medium) or "baja" (low) whenever there is the slightest doubt; it's better for a human to review than to present a wrong value as correct.
 - For material_calidad, transcribe the literal text from the drawing; do not normalize it.
 - The identification fields (numero_plano, proyecto, denominacion, marca, revision) appear under widely varying labels depending on the drawing ("no.", "dwg", "title", "mark", "pos", "rev"...). Read the title-block label even when it doesn't exactly match the field name, and don't confuse the part's mark/position with the drawing number.
-- FLAT PATTERN (sheet metal only): this is the MOST IMPORTANT part for quoting sheet metal. Find the PROFILE/SECTION view (the one showing the part folded edge-on, like a bent line). Each straight segment of that line is a FOLDED FACE; its dimension is a "side". Walk the profile end to end and record in "desarrollo.lados_mm", IN ORDER, the length of each face (e.g. a Z-profile with faces 25.4, 47.6 and 95.25 → lados_mm = [25.4, 47.6, 95.25]). There must be num_pliegues + 1 sides (2 bends → 3 sides). Do your best to read them even if you must infer from the profile's dimensions. In "desarrollo.pliegues" add one item per bend with its angle (use 90 if the drawing states unmarked angles are 90°) and its inner radius (e.g. "R1.5" or "2xR1.5"; radius null if not shown). Only leave lados_mm empty if there truly is no legible profile view.
+- FLAT PATTERN (sheet metal only): this is the MOST IMPORTANT part for quoting sheet metal. Find the PROFILE/SECTION view (the one showing the part folded edge-on, like a bent line). Each straight segment of that line is a FOLDED FACE; its dimension is a "side". Walk the profile end to end and record in "desarrollo.lados", IN ORDER, each face with its length (e.g. a Z-profile with faces 25.4, 47.6 and 95.25 → three sides). There must be num_pliegues + 1 sides (2 bends → 3 sides). Do your best to read them even if you must infer from the profile's dimensions.
+- INSIDE vs OUTSIDE dimension: check whether each dimension measures the face on the INSIDE or the OUTSIDE of the bend. If the dimension lines run between inner faces (excluding the thickness), set cota_interior = true; if they span the outside, false. Example: a U-channel of 2 mm thickness with a 46 mm inside dimension measures 46+2+2 = 50 mm outside. This changes the flat pattern — take it very seriously. When in doubt, false (outside).
+- In "desarrollo.pliegues" add one item per bend with its angle (use 90 if the drawing states unmarked angles are 90°) and its inner radius (e.g. "R1.5" or "2xR1.5"; radius null if not shown). Only leave lados empty if there truly is no legible profile view.
 - DRAWING UNITS: determine in "sistema_unidades" whether the drawing is dimensioned in millimeters ("metrico", title block "Unit: mm") or inches ("imperial", "Unit: in/inch", the " symbol or fractional dimensions). Regardless, return ALL dimensions in millimeters (convert inches: 1" = 25.4 mm).
 - Write all observations in English.`;
 
@@ -98,6 +102,7 @@ export const INSTRUCCION = {
 const SYSTEM_REVISION_ES = `Eres un revisor técnico senior de oficina técnica. Recibes un plano y una PRIMERA extracción de datos hecha por otro sistema. Tu tarea es VERIFICARLA y CORREGIRLA mirando el plano:
 - Comprueba la coherencia de cada campo: que el valor encaje con el tipo de pieza, con las demás cotas, con las unidades (todo en mm) y con la plausibilidad física (p. ej. espesor < largo, ancho ≤ largo, radios/ángulos razonables, familia de material coherente con la calidad).
 - Presta ATENCIÓN ESPECIAL a los campos marcados con confianza "media" o "baja": vuelve a leerlos en el plano y confírmalos o corrígelos.
+- AUDITORÍA MATEMÁTICA: comprueba las aserciones que el plano permita, en especial que la suma de cotas parciales coincida con la cota total (L_total = Σ parciales ± tolerancia) y que las caras del desarrollo cuadren con las cotas generales de la pieza. Verifica también que cada cota_interior sea correcta: una cota interior + espesores adyacentes debe cuadrar con la cota exterior si ambas aparecen.
 - Corrige un valor SOLO si el plano lo respalda; NUNCA inventes. Si algo no es legible, deja null.
 - Actualiza la confianza: sube a "alta" solo si ahora es claramente legible/verificable; usa "media"/"baja" si sigue habiendo duda o incoherencia.
 - Por cada cambio que hagas respecto a la primera extracción, añade UNA observación breve con el formato: "campo: <antes> → <después> (motivo)". Conserva las observaciones previas que sigan siendo válidas.
@@ -106,6 +111,7 @@ const SYSTEM_REVISION_ES = `Eres un revisor técnico senior de oficina técnica.
 const SYSTEM_REVISION_EN = `You are a senior technical reviewer. You receive a drawing and a FIRST data extraction made by another system. Your task is to VERIFY and CORRECT it against the drawing:
 - Check each field for coherence: the value must fit the part type, the other dimensions, the units (all in mm) and physical plausibility (e.g. thickness < length, width ≤ length, reasonable radii/angles, material family consistent with the grade).
 - Pay SPECIAL ATTENTION to fields marked with "media" (medium) or "baja" (low) confidence: read them again on the drawing and confirm or correct them.
+- MATH AUDIT: check whatever assertions the drawing allows, especially that partial dimensions add up to the total (L_total = Σ partials ± tolerance) and that the flat-pattern faces are consistent with the part's overall dimensions. Also verify each cota_interior flag: an inside dimension + adjacent thicknesses must match the outside dimension when both appear.
 - Correct a value ONLY if the drawing supports it; NEVER make it up. If something isn't legible, leave null.
 - Update the confidence: raise to "alta" only if it's now clearly legible/verifiable; use "media"/"baja" if doubt or inconsistency remains.
 - For each change vs the first extraction, add ONE short observation formatted: "field: <before> → <after> (reason)". Keep previous observations that still hold.
@@ -317,7 +323,11 @@ const DATOS_DEMO_ES = {
   roscas: { valor: null, confianza: 'alta' },
   sistema_unidades: 'metrico',
   desarrollo: {
-    lados_mm: [180, 120, 120],
+    lados: [
+      { longitud_mm: 180, cota_interior: false },
+      { longitud_mm: 120, cota_interior: false },
+      { longitud_mm: 120, cota_interior: false },
+    ],
     pliegues: [
       { angulo_grados: 90, radio_mm: 3 },
       { angulo_grados: 90, radio_mm: 3 },
@@ -353,7 +363,11 @@ const DATOS_DEMO_EN = {
   roscas: { valor: null, confianza: 'alta' },
   sistema_unidades: 'metrico',
   desarrollo: {
-    lados_mm: [180, 120, 120],
+    lados: [
+      { longitud_mm: 180, cota_interior: false },
+      { longitud_mm: 120, cota_interior: false },
+      { longitud_mm: 120, cota_interior: false },
+    ],
     pliegues: [
       { angulo_grados: 90, radio_mm: 3 },
       { angulo_grados: 90, radio_mm: 3 },

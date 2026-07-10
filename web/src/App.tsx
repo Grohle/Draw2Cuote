@@ -48,6 +48,7 @@ export default function App() {
   const [camposAbiertos, setCamposAbiertos] = useState(false);
   const [listadoAbierto, setListadoAbierto] = useState(false);
   const [analizando, setAnalizando] = useState(false);
+  const [progreso, setProgreso] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [estadoFeedback, setEstadoFeedback] = useState<EstadoFeedback>('inactivo');
   const [mensajeFeedback, setMensajeFeedback] = useState<string | null>(null);
@@ -119,6 +120,28 @@ export default function App() {
       desplegado,
     });
   }, [hidratado, idioma, unidades, ajustes, tarifas, camposPersonalizados, desplegado]);
+
+  // Progreso del análisis: avanza de forma asintótica hacia el 90% mientras se
+  // espera la respuesta (una sola petición al servidor) y salta al 100% al llegar.
+  useEffect(() => {
+    if (!analizando) return;
+    const inicio = Date.now();
+    setProgreso(4);
+    const timer = setInterval(() => {
+      const segundos = (Date.now() - inicio) / 1000;
+      setProgreso(Math.min(90, 4 + 86 * (1 - Math.exp(-segundos / 20))));
+    }, 250);
+    return () => clearInterval(timer);
+  }, [analizando]);
+
+  /** Etapa mostrada bajo la barra según el % y si hay 2ª pasada de revisión. */
+  const etapaAnalisis = (pct: number): string => {
+    const e = t.app.etapas;
+    if (pct < 10) return e.ingesta;
+    if (pct < (ajustes.revisar ? 55 : 85)) return e.extraccion;
+    if (pct < 85 && ajustes.revisar) return e.auditoria;
+    return e.sintesis;
+  };
 
   const preset = presetDe(ajustes.proveedor);
   const nombreProveedor = presetTextos(ajustes.proveedor, t).nombre;
@@ -336,7 +359,17 @@ export default function App() {
           <button className="btn btn--primario btn--analizar" onClick={analizar} disabled={!archivo || analizando || pdfNoAdmitido}>
             {analizando ? t.app.analizando : t.app.botonAnalizar}
           </button>
-          {analizando && <p className="pista">{t.app.pista}</p>}
+          {analizando && (
+            <div className="progreso">
+              <div className="progreso__barra">
+                <div className="progreso__relleno" style={{ width: `${Math.round(progreso)}%` }} />
+              </div>
+              <p className="progreso__etapa">
+                {etapaAnalisis(progreso)} · {Math.round(progreso)}%
+              </p>
+              <p className="pista">{t.app.pista}</p>
+            </div>
+          )}
           {error && <div className="error">⚠ {error}</div>}
         </div>
 

@@ -41,7 +41,24 @@ export function normalizarExtraccion(datos: unknown): Extraccion {
 
 function normalizarDesarrollo(fuente: unknown) {
   const d = (fuente && typeof fuente === 'object' ? fuente : {}) as Record<string, unknown>;
-  const lados_mm = Array.isArray(d.lados_mm) ? (d.lados_mm as unknown[]).filter((n): n is number => typeof n === 'number') : [];
+
+  // forma actual: lados = [{ longitud_mm, cota_interior }]
+  let lados = Array.isArray(d.lados)
+    ? (d.lados as unknown[])
+        .map((l) => {
+          const o = (l && typeof l === 'object' ? l : {}) as Record<string, unknown>;
+          return { longitud_mm: typeof o.longitud_mm === 'number' ? o.longitud_mm : 0, cota_interior: o.cota_interior === true };
+        })
+        .filter((l) => l.longitud_mm > 0)
+    : [];
+
+  // forma antigua (backend desactualizado): lados_mm = [n, n, ...] → se asume cota exterior
+  if (lados.length === 0 && Array.isArray(d.lados_mm)) {
+    lados = (d.lados_mm as unknown[])
+      .filter((n): n is number => typeof n === 'number' && n > 0)
+      .map((n) => ({ longitud_mm: n, cota_interior: false }));
+  }
+
   const pliegues = Array.isArray(d.pliegues)
     ? (d.pliegues as unknown[]).map((p) => {
         const o = (p && typeof p === 'object' ? p : {}) as Record<string, unknown>;
@@ -51,5 +68,5 @@ function normalizarDesarrollo(fuente: unknown) {
         };
       })
     : [];
-  return { lados_mm, pliegues };
+  return { lados, pliegues };
 }

@@ -63,6 +63,13 @@ export interface Extraccion {
   observaciones: string[];
 }
 
+export interface LadoGeom {
+  /** Longitud de la cara tal como está acotada en el plano, en mm. */
+  longitud_mm: number;
+  /** true si la cota mide por el interior del doblado (sin incluir espesores). */
+  cota_interior: boolean;
+}
+
 export interface PliegueGeom {
   /** Ángulo de doblado en grados. null si no se leyó del plano. */
   angulo_grados: number | null;
@@ -71,8 +78,8 @@ export interface PliegueGeom {
 }
 
 export interface DesarrolloGeom {
-  /** Longitudes de los tramos rectos (lados) entre pliegues, en mm y en orden. */
-  lados_mm: number[];
+  /** Caras (tramos rectos) del perfil de plegado, en orden. */
+  lados: LadoGeom[];
   /** Geometría por pliegue (ángulo y radio). */
   pliegues: PliegueGeom[];
 }
