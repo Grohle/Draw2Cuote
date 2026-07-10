@@ -107,6 +107,25 @@ npm run build
 npm start   # sirve la app compilada en :3001
 ```
 
+### Versión de escritorio (instalable .exe)
+
+Para quien no quiera usar la versión web hay un empaquetado de escritorio con Electron en `desktop/` (separado del `package.json` raíz para que la versión web no descargue Electron). La app de escritorio arranca el mismo servidor embebido y guarda `config.json` y el feedback en el perfil del usuario (`%APPDATA%/Draw2Quote` en Windows), sobreviviendo a reinstalaciones.
+
+```bash
+# preparar la app (una vez)
+npm install && npm --prefix web install && npm run build
+
+# construir el instalable (ejecutar EN Windows para el .exe)
+cd desktop
+npm install
+npm run build:win     # → desktop/dist/Draw2Quote Setup 0.1.0.exe (instalador NSIS)
+
+# probar en modo escritorio sin empaquetar
+npm run dev
+```
+
+> El instalador de Windows (**NSIS .exe**) debe generarse en Windows (o con Wine). Hay también targets `build:linux` (AppImage) y `build:mac` (DMG). Una vez instalado, en ⚙ Ajustes se configura la clave de API igual que en la web.
+
 ### Configurar la API desde la app (multi-proveedor)
 
 En **⚙ Ajustes** (cabecera) eliges el proveedor de IA sin tocar el servidor:

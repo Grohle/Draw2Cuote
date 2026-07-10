@@ -13,12 +13,11 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirDatos } from './almacen.js';
 import { INSTRUCCION, sistemaBase } from './extract.js';
 
-const AQUI = path.dirname(fileURLToPath(import.meta.url));
-const ORIGEN = path.join(AQUI, 'datos', 'feedback.jsonl');
-const DESTINO = path.join(AQUI, 'datos', 'finetuning.jsonl');
+const ORIGEN = path.join(dirDatos(), 'feedback.jsonl');
+const DESTINO = path.join(dirDatos(), 'finetuning.jsonl');
 
 const NOTA_SIN_IMAGEN = {
   es: '[Imagen del plano no incluida en este evento — usuario no marcó "incluir imagen". Este ejemplo solo es útil para fine-tuning textual/de criterio, no de visión.]',
