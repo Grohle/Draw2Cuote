@@ -13,7 +13,9 @@
 
 ### Campos adaptados al tipo de pieza
 
-La IA detecta primero el **tipo de pieza** — chapa plegada, torneado, fresado o tubo/perfil — y la UI adapta los campos: una pieza torneada muestra longitud y Ø máximo (sin espesor ni pliegues), la chapa muestra espesor y pliegues, el fresado añade el alto y el tubo pide espesor de pared. Las validaciones también cambian según el tipo. El tipo es editable y el formulario se reconfigura al cambiarlo.
+La IA detecta primero el **método de fabricación** y la UI adapta los campos según él. Se reconocen los procesos más habituales — chapa plegada, corte láser, torneado, fresado/CNC, tubo/perfil, impresión 3D, inyección, fundición, extrusión, termoformado y carpintería — y las familias de material tanto metálicas como no metálicas: acero al carbono/inoxidable, aluminio, galvanizado, cobre/latón, titanio, plástico, madera, vidrio, composite, cerámica y caucho (con sus grados/calidades habituales). Una pieza torneada muestra longitud y Ø máximo, la chapa muestra espesor y pliegues, los procesos volumétricos (3D, inyección…) piden las cotas envolventes. Las validaciones también cambian según el tipo. El tipo es editable y el formulario se reconfigura al cambiarlo.
+
+El presupuesto cubre con fórmula propia la chapa, el corte, el mecanizado y el tubo; para procesos sin fórmula específica (impresión 3D, inyección, fundición…) estima el **coste de material** por volumen envolvente y avisa de que el coste de proceso debe añadirse a mano — nunca inventa un número.
 
 Además de número de plano, denominación y revisión, la extracción incluye la **marca / posición** de la pieza (en muchos despieces es su identificador corto) y el **proyecto / obra** al que pertenece, si figuran en el plano.
 

@@ -24,6 +24,7 @@ Primero identifica el TIPO DE PIEZA (chapa plegada, torneado, fresado, tubo/perf
 - torneado: largo (longitud) y diametro_max; ancho, espesor y pliegues devuelven null.
 - fresado: largo, ancho y alto; espesor y pliegues devuelven null.
 - tubo_perfil: largo (longitud), espesor (pared) y diametro_max o ancho según la sección; pliegues null salvo curvados.
+- otros procesos (corte_laser, impresion_3d, inyeccion, fundicion, extrusion, termoformado, carpinteria): rellena las cotas envolventes que apliquen (largo/ancho/alto para piezas volumétricas, o diámetro). Reconoce también el material aunque NO sea metal: plástico, madera, vidrio, composite (fibra de vidrio/carbono), cerámica o caucho.
 Un campo que NO aplica al tipo de pieza se devuelve null SIN añadir observación (no es un dato ausente, simplemente no procede).
 
 Reglas estrictas para evitar lecturas erróneas:
@@ -46,6 +47,7 @@ First identify the PART TYPE (sheet metal, turned, milled, tube/profile) from th
 - torneado (turned): length and max diameter; width, thickness and bends return null.
 - fresado (milled): length, width and height; thickness and bends return null.
 - tubo_perfil (tube/profile): length, thickness (wall) and max diameter or width depending on the section; bends null unless curved.
+- other processes (corte_laser, impresion_3d 3D printing, inyeccion injection molding, fundicion casting, extrusion, termoformado thermoforming, carpinteria woodworking): fill the bounding dimensions that apply (length/width/height for volumetric parts, or diameter). Also recognize non-metal materials: plastic, wood, glass, composite (glass/carbon fiber), ceramic or rubber.
 A field that does NOT apply to the part type is returned as null WITHOUT adding an observation (it's not missing data, it simply doesn't apply).
 
 Strict rules to avoid incorrect readings:

@@ -104,9 +104,16 @@ const TEXTOS_ES = {
   },
   tiposPieza: {
     chapa_plegada: 'Chapa plegada',
+    corte_laser: 'Corte láser (plano)',
     torneado: 'Torneado',
-    fresado: 'Fresado',
+    fresado: 'Fresado / CNC',
     tubo_perfil: 'Tubo / perfil',
+    impresion_3d: 'Impresión 3D',
+    inyeccion: 'Inyección',
+    fundicion: 'Fundición',
+    extrusion: 'Extrusión',
+    termoformado: 'Termoformado',
+    carpinteria: 'Carpintería / madera',
     otro: 'Otro',
   },
   familias: {
@@ -114,6 +121,14 @@ const TEXTOS_ES = {
     acero_inoxidable: 'Acero inoxidable',
     aluminio: 'Aluminio',
     galvanizado: 'Galvanizado',
+    cobre_laton: 'Cobre / latón',
+    titanio: 'Titanio',
+    plastico: 'Plástico',
+    madera: 'Madera',
+    vidrio: 'Vidrio',
+    composite: 'Composite',
+    ceramica: 'Cerámica',
+    caucho: 'Caucho / goma',
     otro: 'Otro',
   },
   resultados: {
@@ -241,6 +256,8 @@ const TEXTOS_ES = {
       'Peso estimado con la fórmula de tubo de pared delgada (perímetro medio × espesor × longitud), no la sección real.',
     tipoOtroNoCalculable:
       'No hay fórmula de cálculo para el tipo de pieza "Otro": corrígelo a chapa/torneado/fresado/tubo si corresponde.',
+    procesoSinFormula: (proceso: string): string =>
+      `Proceso "${proceso}": solo se estima el coste de material (volumen envolvente × densidad); el coste de proceso (molde, ciclo, relleno, mano de obra...) no está incluido — añádelo manualmente.`,
   },
   desarrollo: {
     titulo: '📐 Desarrollo de chapa',
@@ -449,10 +466,17 @@ const TEXTOS_EN: Textos = {
     roscas: 'Threads to machine (thread size and count). Each thread adds an operation.',
   },
   tiposPieza: {
-    chapa_plegada: 'Sheet metal',
+    chapa_plegada: 'Sheet metal (bent)',
+    corte_laser: 'Laser cut (flat)',
     torneado: 'Turned',
-    fresado: 'Milled',
+    fresado: 'Milled / CNC',
     tubo_perfil: 'Tube / profile',
+    impresion_3d: '3D printing',
+    inyeccion: 'Injection molded',
+    fundicion: 'Casting',
+    extrusion: 'Extrusion',
+    termoformado: 'Thermoforming',
+    carpinteria: 'Woodworking',
     otro: 'Other',
   },
   familias: {
@@ -460,6 +484,14 @@ const TEXTOS_EN: Textos = {
     acero_inoxidable: 'Stainless steel',
     aluminio: 'Aluminum',
     galvanizado: 'Galvanized',
+    cobre_laton: 'Copper / brass',
+    titanio: 'Titanium',
+    plastico: 'Plastic',
+    madera: 'Wood',
+    vidrio: 'Glass',
+    composite: 'Composite',
+    ceramica: 'Ceramic',
+    caucho: 'Rubber',
     otro: 'Other',
   },
   resultados: {
@@ -582,6 +614,8 @@ const TEXTOS_EN: Textos = {
     avisoVolumenBruto: 'Raw stock volume estimated from bounding geometry (cylinder/prism), without deducting actual machining.',
     avisoTuboPared: 'Weight estimated using the thin-wall tube formula (mean perimeter × thickness × length), not the actual cross-section.',
     tipoOtroNoCalculable: 'There is no cost formula for part type "Other": correct it to sheet metal/turned/milled/tube if applicable.',
+    procesoSinFormula: (proceso: string): string =>
+      `Process "${proceso}": only material cost is estimated (bounding volume × density); the process cost (tooling, cycle, infill, labor...) is not included — add it manually.`,
   },
   desarrollo: {
     titulo: '📐 Sheet flat pattern',
