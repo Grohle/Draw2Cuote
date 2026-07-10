@@ -261,56 +261,48 @@ body {
   color: var(--texto-suave);
 }
 
-.desarrollo__lados {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-
-.desarrollo__lados input {
-  width: 5.5rem;
-  background: var(--panel-2);
-  border: 1px solid var(--borde);
-  color: var(--texto);
-  border-radius: 6px;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.9rem;
-}
-
-.desarrollo__pliegues-tabla {
+.desarrollo__lista {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.7rem;
 }
 
-.desarrollo__pliegue-cab,
-.desarrollo__pliegue-fila {
-  display: grid;
-  grid-template-columns: 2.5rem 1fr 1fr 4rem 4rem;
-  gap: 0.5rem;
+.desarrollo__fila {
+  display: flex;
   align-items: center;
-}
-
-.desarrollo__pliegue-cab {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--texto-suave);
-}
-
-.desarrollo__pliegue-fila {
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
   font-size: 0.88rem;
 }
 
-.desarrollo__pliegue-n {
+.desarrollo__fila--lado {
+  background: var(--panel-2);
+}
+
+.desarrollo__fila--pliegue {
+  border: 1px dashed var(--borde);
+}
+
+.desarrollo__etq {
+  min-width: 4.5rem;
   color: var(--texto-suave);
 }
 
-.desarrollo__pliegue-fila input {
-  width: 100%;
-  background: var(--panel-2);
+.desarrollo__etq--pliegue {
+  color: var(--acento);
+}
+
+.desarrollo__u {
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+}
+
+.desarrollo__fila input {
+  width: 5rem;
+  background: var(--fondo);
   border: 1px solid var(--borde);
   color: var(--texto);
   border-radius: 6px;
@@ -320,8 +312,20 @@ body {
 
 .desarrollo__con-origen {
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.desarrollo__mini {
+  font-size: 0.72rem;
+  color: var(--texto-suave);
+}
+
+.desarrollo__babd {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  white-space: nowrap;
 }
 
 .origen {
@@ -335,14 +339,9 @@ body {
 }
 
 @media (max-width: 640px) {
-  .desarrollo__pliegue-cab {
-    display: none;
-  }
-  .desarrollo__pliegue-fila {
-    grid-template-columns: 1fr 1fr;
-    row-gap: 0.3rem;
-    border-bottom: 1px solid var(--borde);
-    padding-bottom: 0.4rem;
+  .desarrollo__babd {
+    margin-left: 0;
+    width: 100%;
   }
 }
 
