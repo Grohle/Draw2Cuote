@@ -21,10 +21,23 @@ const campoNumero = (descripcion) =>
 export const EsquemaExtraccion = z.object({
   tipo_pieza: z.object({
     valor: z
-      .enum(['chapa_plegada', 'torneado', 'fresado', 'tubo_perfil', 'otro'])
+      .enum([
+        'chapa_plegada',
+        'corte_laser',
+        'torneado',
+        'fresado',
+        'tubo_perfil',
+        'impresion_3d',
+        'inyeccion',
+        'fundicion',
+        'extrusion',
+        'termoformado',
+        'carpinteria',
+        'otro',
+      ])
       .nullable()
       .describe(
-        'Tipo de fabricación de la pieza: chapa_plegada (corte láser/punzonado y plegado), torneado (pieza de revolución), fresado (pieza prismática mecanizada), tubo_perfil (tubo o perfil cortado/curvado). null solo si es imposible determinarlo.'
+        'Método/proceso de fabricación de la pieza: chapa_plegada (corte y plegado de chapa), corte_laser (chapa/plancha cortada plana, sin plegar), torneado (revolución), fresado (mecanizado CNC/prismático), tubo_perfil (tubo o perfil cortado/curvado), impresion_3d (fabricación aditiva), inyeccion (moldeo por inyección de plástico), fundicion (fundición/colada de metal), extrusion (perfil extruido), termoformado (conformado de lámina plástica), carpinteria (madera/tablero, CNC de madera). Usa "otro" solo si no encaja en ninguno. null solo si es imposible determinarlo.'
       ),
     confianza,
   }),
@@ -40,9 +53,25 @@ export const EsquemaExtraccion = z.object({
   espesor_mm: campoNumero('Espesor de la chapa o de la pared del tubo en milímetros (cajetín, sección o nota tipo "e=", "t=", "#"). En piezas macizas torneadas o fresadas devuelve null.'),
   material_familia: z.object({
     valor: z
-      .enum(['acero_carbono', 'acero_inoxidable', 'aluminio', 'galvanizado', 'otro'])
+      .enum([
+        'acero_carbono',
+        'acero_inoxidable',
+        'aluminio',
+        'galvanizado',
+        'cobre_laton',
+        'titanio',
+        'plastico',
+        'madera',
+        'vidrio',
+        'composite',
+        'ceramica',
+        'caucho',
+        'otro',
+      ])
       .nullable()
-      .describe('Familia de material. null si el plano no lo indica.'),
+      .describe(
+        'Familia del material: metales (acero_carbono, acero_inoxidable, aluminio, galvanizado, cobre_laton, titanio) o no metales (plastico, madera, vidrio, composite —fibra de vidrio/carbono—, ceramica, caucho). "otro" si no encaja. null si el plano no lo indica.'
+      ),
     confianza,
   }),
   material_calidad: campoTexto('Calidad o grado del material tal como figura en el plano (p. ej. "S235JR", "AISI 304", "5754 H22").'),

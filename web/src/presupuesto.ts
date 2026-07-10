@@ -9,8 +9,19 @@ const DENSIDADES: Record<FamiliaMaterial, number> = {
   acero_inoxidable: 7900,
   aluminio: 2700,
   galvanizado: 7850,
-  otro: 7850,
+  cobre_laton: 8500,
+  titanio: 4500,
+  plastico: 1200,
+  madera: 700,
+  vidrio: 2500,
+  composite: 1600,
+  ceramica: 3800,
+  caucho: 1200,
+  otro: 1500,
 };
+
+/** Procesos volumétricos sin fórmula de coste específica: se estima material y se avisa. */
+const TIPOS_VOLUMETRICOS_GENERICOS = ['impresion_3d', 'inyeccion', 'fundicion', 'extrusion', 'termoformado', 'carpinteria'];
 
 /** Variantes en ambos idiomas que significan "sin acabado / material en bruto" (el texto lo escribe el modelo o el usuario). */
 const SIN_ACABADO = ['bruto', 'raw', 'raw / mill finish', 'none', 'sin acabado', 'no finish', 'mill finish', 'as-is'];
@@ -94,7 +105,7 @@ export function calcularPresupuesto(
   const numRoscas = contarRoscas(datos.roscas.valor);
   const tieneToleranciaCritica = Boolean(datos.tolerancias_criticas.valor);
 
-  if (tipo === 'chapa_plegada') {
+  if (tipo === 'chapa_plegada' || tipo === 'corte_laser') {
     const largo = datos.largo_mm.valor;
     const ancho = datos.ancho_mm.valor;
     const espesor = datos.espesor_mm.valor;
@@ -207,6 +218,28 @@ export function calcularPresupuesto(
     if (numAgujeros) lineas.push({ concepto: p.agujerosChapa(numAgujeros, `${tarifas.costePorAgujeroChapa.toFixed(2)} €`), importe: costeAgujeros });
 
     costeVariablePorPieza = costeMaterial + costeCorte + costePliegues + costeAgujeros;
+  } else if (tipo != null && TIPOS_VOLUMETRICOS_GENERICOS.includes(tipo)) {
+    // Procesos sin fórmula específica (impresión 3D, inyección, fundición, extrusión,
+    // termoformado, carpintería): se estima el material por volumen envolvente y se avisa
+    // de que el coste de proceso no está incluido (varía mucho: molde, ciclo, relleno...).
+    const largo = datos.largo_mm.valor;
+    const ancho = datos.ancho_mm.valor;
+    const alto = datos.alto_mm.valor;
+    const diametro = datos.diametro_max_mm.valor;
+    let volumenM3: number | null = null;
+    if (largo && ancho && alto) {
+      volumenM3 = (largo / 1000) * (ancho / 1000) * (alto / 1000);
+    } else if (diametro && largo) {
+      volumenM3 = Math.PI * (diametro / 1000 / 2) ** 2 * (largo / 1000);
+    }
+    if (volumenM3 == null) {
+      return NO_CALCULABLE([t.campos.largo_mm, t.campos.ancho_mm, t.campos.alto_mm]);
+    }
+    const pesoKg = volumenM3 * densidad;
+    const costeMaterial = pesoKg * precioKg;
+    lineas.push({ concepto: p.material(formatearPeso(pesoKg, unidades), formatearPrecioKg(precioKg, unidades)), importe: costeMaterial });
+    avisos.push(p.procesoSinFormula(t.tiposPieza[tipo]));
+    costeVariablePorPieza = costeMaterial;
   }
 
   if (tieneToleranciaCritica) {

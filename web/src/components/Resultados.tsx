@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { etiquetaDe, type CamposPersonalizados } from '../camposPersonalizados';
 import { acabadosSugeridos, campoAplica, CALIDADES, ESPESORES_ESTANDAR, familiasOpciones, tiposPiezaOpciones, TOLERANCIAS } from '../catalogo';
 import type { OpcionesDesplegado } from '../desplegado';
@@ -17,6 +17,7 @@ interface Props {
   datos: Extraccion;
   onCambio: (datos: Extraccion) => void;
   demo: boolean;
+  revisado: boolean;
   onGuardarFeedback: () => void;
   estadoFeedback: EstadoFeedback;
   mensajeFeedback: string | null;
@@ -30,6 +31,7 @@ interface Props {
   camposPersonalizados: CamposPersonalizados;
   opcionesDesplegado: OpcionesDesplegado;
   onCambioDesplegado: (o: OpcionesDesplegado) => void;
+  onAnadirListado: (datos: Extraccion) => void;
 }
 
 type ClaveCampo = Exclude<keyof Extraccion, 'observaciones' | 'desarrollo' | 'sistema_unidades'>;
@@ -41,6 +43,7 @@ export function Resultados({
   datos,
   onCambio,
   demo,
+  revisado,
   onGuardarFeedback,
   estadoFeedback,
   mensajeFeedback,
@@ -54,7 +57,9 @@ export function Resultados({
   camposPersonalizados,
   opcionesDesplegado,
   onCambioDesplegado,
+  onAnadirListado,
 }: Props) {
+  const [anadido, setAnadido] = useState(false);
   const avisos = useMemo(() => validar(datos, t, unidades), [datos, t, unidades]);
   const avisosDe = (campo: keyof Extraccion) => avisos.filter((a) => a.campo === campo).map((a) => a.mensaje);
   const r = t.resultados;
@@ -175,6 +180,7 @@ export function Resultados({
 
       <div className="resultados__cabecera">
         <ResumenAvisos avisos={avisos} t={t} />
+        {revisado && <span className="chip-unidades chip-unidades--ia">{r.revisadoIA}</span>}
         {datos.sistema_unidades && <span className="chip-unidades">{r.unidadesPlano(datos.sistema_unidades === 'imperial')}</span>}
       </div>
 
@@ -291,10 +297,20 @@ export function Resultados({
       </div>
 
       <div className="acciones">
+        <button
+          className="btn btn--primario"
+          onClick={() => {
+            onAnadirListado(datos);
+            setAnadido(true);
+            setTimeout(() => setAnadido(false), 2000);
+          }}
+        >
+          {anadido ? r.anadido : r.anadirListado}
+        </button>
         <button className="btn" onClick={copiar}>
           {r.copiarJson}
         </button>
-        <button className="btn btn--primario" onClick={exportar}>
+        <button className="btn" onClick={exportar}>
           {r.descargarJson}
         </button>
       </div>

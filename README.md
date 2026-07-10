@@ -13,7 +13,17 @@
 
 ### Campos adaptados al tipo de pieza
 
-La IA detecta primero el **tipo de pieza** — chapa plegada, torneado, fresado o tubo/perfil — y la UI adapta los campos: una pieza torneada muestra longitud y Ø máximo (sin espesor ni pliegues), la chapa muestra espesor y pliegues, el fresado añade el alto y el tubo pide espesor de pared. Las validaciones también cambian según el tipo. El tipo es editable y el formulario se reconfigura al cambiarlo.
+La IA detecta primero el **método de fabricación** y la UI adapta los campos según él. Se reconocen los procesos más habituales — chapa plegada, corte láser, torneado, fresado/CNC, tubo/perfil, impresión 3D, inyección, fundición, extrusión, termoformado y carpintería — y las familias de material tanto metálicas como no metálicas: acero al carbono/inoxidable, aluminio, galvanizado, cobre/latón, titanio, plástico, madera, vidrio, composite, cerámica y caucho (con sus grados/calidades habituales). Una pieza torneada muestra longitud y Ø máximo, la chapa muestra espesor y pliegues, los procesos volumétricos (3D, inyección…) piden las cotas envolventes. Las validaciones también cambian según el tipo. El tipo es editable y el formulario se reconfigura al cambiarlo.
+
+El presupuesto cubre con fórmula propia la chapa, el corte, el mecanizado y el tubo; para procesos sin fórmula específica (impresión 3D, inyección, fundición…) estima el **coste de material** por volumen envolvente y avisa de que el coste de proceso debe añadirse a mano — nunca inventa un número.
+
+### Capa de razonamiento tras el scan (verificación)
+
+Con la opción **🧠 Revisar la extracción** activada (por defecto), tras leer el plano se hace una **segunda pasada de razonamiento**: el modelo recibe el plano y su primera extracción y **verifica la coherencia de cada campo** (unidades, cotas intercambiadas, familia↔calidad, plausibilidad física) y **vuelve a mirar los campos de confianza media/baja** para confirmarlos o corregirlos. Solo cambia un valor si el plano lo respalda (nunca inventa) y anota cada corrección en las observaciones (`campo: antes → después`). Los resultados revisados muestran el distintivo **🧠 Revisado por IA**. Se puede desactivar en ⚙ Ajustes para ahorrar la segunda llamada; si esa segunda llamada falla, se devuelve la primera extracción sin romper el análisis.
+
+### Listado de piezas y exportación
+
+Cada pieza analizada se puede **añadir a un listado (📋)** que muestra el **precio total** del conjunto con las tarifas actuales y se **exporta a CSV o Excel**. La exportación incluye **solo las columnas con algún valor** (las columnas totalmente vacías se omiten). El listado se guarda en el navegador.
 
 Además de número de plano, denominación y revisión, la extracción incluye la **marca / posición** de la pieza (en muchos despieces es su identificador corto) y el **proyecto / obra** al que pertenece, si figuran en el plano.
 

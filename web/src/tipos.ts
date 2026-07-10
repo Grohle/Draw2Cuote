@@ -12,9 +12,29 @@ export type FamiliaMaterial =
   | 'acero_inoxidable'
   | 'aluminio'
   | 'galvanizado'
+  | 'cobre_laton'
+  | 'titanio'
+  | 'plastico'
+  | 'madera'
+  | 'vidrio'
+  | 'composite'
+  | 'ceramica'
+  | 'caucho'
   | 'otro';
 
-export type TipoPieza = 'chapa_plegada' | 'torneado' | 'fresado' | 'tubo_perfil' | 'otro';
+export type TipoPieza =
+  | 'chapa_plegada'
+  | 'corte_laser'
+  | 'torneado'
+  | 'fresado'
+  | 'tubo_perfil'
+  | 'impresion_3d'
+  | 'inyeccion'
+  | 'fundicion'
+  | 'extrusion'
+  | 'termoformado'
+  | 'carpinteria'
+  | 'otro';
 
 export interface Extraccion {
   tipo_pieza: Campo<TipoPieza>;
@@ -59,6 +79,8 @@ export interface DesarrolloGeom {
 
 export interface RespuestaExtraccion {
   demo: boolean;
+  /** true si pasó por la segunda pasada de razonamiento (verificación). */
+  revisado?: boolean;
   datos: Extraccion;
 }
 

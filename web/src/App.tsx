@@ -10,11 +10,13 @@ import { Ajustes } from './components/Ajustes';
 import { Calibracion } from './components/Calibracion';
 import { Campos } from './components/Campos';
 import { Dropzone, type ArchivoPlano } from './components/Dropzone';
+import { Listado } from './components/Listado';
 import { type EstadoFeedback, Resultados } from './components/Resultados';
 import { Tarifas as ModalTarifas } from './components/Tarifas';
 import { cargarConfigArchivo, guardarConfigArchivo, sinPreferenciasLocales } from './configArchivo';
 import { cargarDesplegado, guardarDesplegado, type OpcionesDesplegado } from './desplegado';
 import { cargarIdioma, guardarIdioma, obtenerTextos, type Idioma } from './i18n';
+import { cargarListado, guardarListado, type ItemListado } from './listado';
 import { normalizarExtraccion } from './normalizar';
 import { presetDe, presetTextos } from './proveedores';
 import { cargarTarifas, guardarTarifas, type Tarifas } from './tarifas';
@@ -31,6 +33,7 @@ export default function App() {
   const [datos, setDatos] = useState<Extraccion | null>(null);
   const [datosOriginales, setDatosOriginales] = useState<Extraccion | null>(null);
   const [demo, setDemo] = useState(false);
+  const [revisado, setRevisado] = useState(false);
   const [serverKey, setServerKey] = useState(false);
   const [ajustes, setAjustes] = useState<AjustesApp>(() => cargarAjustes());
   const [tarifas, setTarifas] = useState<Tarifas>(() => cargarTarifas());
@@ -38,10 +41,12 @@ export default function App() {
   const [unidades, setUnidades] = useState<SistemaUnidades>(() => cargarUnidades());
   const [camposPersonalizados, setCamposPersonalizados] = useState<CamposPersonalizados>(() => cargarCamposPersonalizados());
   const [desplegado, setDesplegado] = useState<OpcionesDesplegado>(() => cargarDesplegado());
+  const [listado, setListado] = useState<ItemListado[]>(() => cargarListado());
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   const [calibracionAbierta, setCalibracionAbierta] = useState(false);
   const [tarifasAbiertas, setTarifasAbiertas] = useState(false);
   const [camposAbiertos, setCamposAbiertos] = useState(false);
+  const [listadoAbierto, setListadoAbierto] = useState(false);
   const [analizando, setAnalizando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estadoFeedback, setEstadoFeedback] = useState<EstadoFeedback>('inactivo');
@@ -108,7 +113,7 @@ export default function App() {
       version: 1,
       idioma,
       unidades,
-      ajustes: { proveedor: ajustes.proveedor, baseUrl: ajustes.baseUrl, modelo: ajustes.modelo },
+      ajustes: { proveedor: ajustes.proveedor, baseUrl: ajustes.baseUrl, modelo: ajustes.modelo, revisar: ajustes.revisar },
       tarifas,
       camposPersonalizados,
       desplegado,
@@ -138,6 +143,17 @@ export default function App() {
   const cambiarDesplegado = (nuevo: OpcionesDesplegado) => {
     setDesplegado(nuevo);
     guardarDesplegado(nuevo);
+  };
+
+  const actualizarListado = (nuevo: ItemListado[]) => {
+    setListado(nuevo);
+    guardarListado(nuevo);
+  };
+
+  const anadirAlListado = (d: Extraccion) => {
+    // instantánea independiente de la pieza analizada
+    const item: ItemListado = { id: crypto.randomUUID(), datos: JSON.parse(JSON.stringify(d)) };
+    actualizarListado([...listado, item]);
   };
 
   const analizar = async () => {
@@ -172,6 +188,7 @@ export default function App() {
       // copia independiente: "datos" se mutará con las correcciones del usuario
       setDatosOriginales(JSON.parse(JSON.stringify(datosNormalizados)));
       setDemo(respuesta.demo);
+      setRevisado(Boolean(respuesta.revisado));
       // si el plano trae un sistema de unidades detectado, ajusta la vista a él
       if (datosNormalizados.sistema_unidades && datosNormalizados.sistema_unidades !== unidades) {
         cambiarUnidades(datosNormalizados.sistema_unidades);
@@ -251,6 +268,10 @@ export default function App() {
           <button className="btn btn--ajustes" title={t.app.tituloCampos} aria-label={t.app.tituloCampos} onClick={() => setCamposAbiertos(true)}>
             {t.app.botonCampos}
           </button>
+          <button className="btn btn--ajustes" title={t.app.tituloListado} aria-label={t.app.tituloListado} onClick={() => setListadoAbierto(true)}>
+            {t.app.botonListado}
+            {listado.length > 0 && <span className="btn__contador">{listado.length}</span>}
+          </button>
           <button className="btn btn--ajustes" title={t.app.tituloAjustes} aria-label={t.app.tituloAjustes} onClick={() => setAjustesAbiertos(true)}>
             {t.app.botonAjustes}
           </button>
@@ -275,6 +296,17 @@ export default function App() {
           onCambio={cambiarCamposPersonalizados}
           onCerrar={() => setCamposAbiertos(false)}
           t={t}
+        />
+      )}
+      {listadoAbierto && (
+        <Listado
+          items={listado}
+          tarifas={tarifas}
+          unidades={unidades}
+          t={t}
+          onQuitar={(id) => actualizarListado(listado.filter((it) => it.id !== id))}
+          onVaciar={() => actualizarListado([])}
+          onCerrar={() => setListadoAbierto(false)}
         />
       )}
       {tarifasAbiertas && (
@@ -314,6 +346,7 @@ export default function App() {
               datos={datos}
               onCambio={cambiarDatos}
               demo={demo}
+              revisado={revisado}
               onGuardarFeedback={guardarFeedback}
               estadoFeedback={estadoFeedback}
               mensajeFeedback={mensajeFeedback}
@@ -327,6 +360,7 @@ export default function App() {
               camposPersonalizados={camposPersonalizados}
               opcionesDesplegado={desplegado}
               onCambioDesplegado={cambiarDesplegado}
+              onAnadirListado={anadirAlListado}
             />
           ) : (
             <div className="vacio">

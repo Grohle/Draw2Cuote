@@ -69,64 +69,61 @@ export function Desarrollo({ datos, onCambio, unidades, opciones, onCambioOpcion
         )}
       </div>
 
-      {/* Lados (tramos rectos) leídos del plano */}
-      <p className="desarrollo__subtitulo">{`${d.lados} (${etiquetaLongitud(unidades)})`}</p>
-      <div className="desarrollo__lados">
-        {Array.from({ length: numLados }, (_, i) => (
-          <input
-            key={i}
-            type="number"
-            step="0.1"
-            min="0"
-            aria-label={`${d.lado} ${i + 1}`}
-            placeholder="—"
-            value={mostrarMm(datos.desarrollo.lados_mm[i], unidades)}
-            onChange={(e) => setLado(i, e.target.value)}
-          />
-        ))}
-      </div>
-
-      {/* Geometría por pliegue: ángulo y radio (del plano, o por defecto) */}
-      <div className="desarrollo__pliegues-tabla">
-        <div className="desarrollo__pliegue-cab">
-          <span>{d.pliegue}</span>
-          <span>{`${d.angulo} (°)`}</span>
-          <span>{`${d.radio} (${etiquetaLongitud(unidades)})`}</span>
-          <span>{d.baPorPliegue}</span>
-          <span>{d.bdPorPliegue}</span>
-        </div>
-        {res.pliegues.map((p) => {
-          const geom = datos.desarrollo.pliegues[p.indice];
-          return (
-            <div className="desarrollo__pliegue-fila" key={p.indice}>
-              <span className="desarrollo__pliegue-n">{p.indice + 1}</span>
-              <span className="desarrollo__con-origen">
-                <input
-                  type="number"
-                  step="1"
-                  min="0"
-                  max="180"
-                  placeholder={String(opciones.anguloDefecto)}
-                  value={geom?.angulo_grados ?? ''}
-                  onChange={(e) => setPliegue(p.indice, { angulo_grados: e.target.value === '' ? null : Number(e.target.value) })}
-                />
-                <em className={p.anguloExtraido ? 'origen origen--plano' : 'origen'}>{p.anguloExtraido ? d.delPlano : d.porDefecto}</em>
-              </span>
-              <span className="desarrollo__con-origen">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  placeholder={radioDefectoMostrado}
-                  value={geom?.radio_mm != null ? mostrarMm(geom.radio_mm, unidades) : ''}
-                  onChange={(e) => setPliegue(p.indice, { radio_mm: e.target.value === '' ? null : unidadMostradaAMm(Number(e.target.value), unidades) })}
-                />
-                <em className={p.radioExtraido ? 'origen origen--plano' : 'origen'}>{p.radioExtraido ? d.delPlano : d.porDefecto}</em>
-              </span>
-              <span>{formatearLongitud(p.baMm, unidades)}</span>
-              <span>{formatearLongitud(p.bdMm, unidades)}</span>
-            </div>
-          );
+      {/* Perfil de plegado: lados y pliegues intercalados, cada medida en su fila */}
+      <p className="desarrollo__subtitulo">{d.lados}</p>
+      <div className="desarrollo__lista">
+        {Array.from({ length: numLados }, (_, i) => {
+          const filas = [
+            <div className="desarrollo__fila desarrollo__fila--lado" key={`l${i}`}>
+              <span className="desarrollo__etq">{`${d.lado} ${i + 1}`}</span>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                aria-label={`${d.lado} ${i + 1}`}
+                placeholder="—"
+                value={mostrarMm(datos.desarrollo.lados_mm[i], unidades)}
+                onChange={(e) => setLado(i, e.target.value)}
+              />
+              <span className="desarrollo__u">{etiquetaLongitud(unidades)}</span>
+            </div>,
+          ];
+          if (i < numPliegues) {
+            const p = res.pliegues[i];
+            const geom = datos.desarrollo.pliegues[i];
+            filas.push(
+              <div className="desarrollo__fila desarrollo__fila--pliegue" key={`p${i}`}>
+                <span className="desarrollo__etq desarrollo__etq--pliegue">{`${d.pliegue} ${i + 1}`}</span>
+                <span className="desarrollo__con-origen">
+                  <span className="desarrollo__mini">{`${d.angulo} (°)`}</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="180"
+                    placeholder={String(opciones.anguloDefecto)}
+                    value={geom?.angulo_grados ?? ''}
+                    onChange={(e) => setPliegue(i, { angulo_grados: e.target.value === '' ? null : Number(e.target.value) })}
+                  />
+                  <em className={p.anguloExtraido ? 'origen origen--plano' : 'origen'}>{p.anguloExtraido ? d.delPlano : d.porDefecto}</em>
+                </span>
+                <span className="desarrollo__con-origen">
+                  <span className="desarrollo__mini">{`${d.radio} (${etiquetaLongitud(unidades)})`}</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={radioDefectoMostrado}
+                    value={geom?.radio_mm != null ? mostrarMm(geom.radio_mm, unidades) : ''}
+                    onChange={(e) => setPliegue(i, { radio_mm: e.target.value === '' ? null : unidadMostradaAMm(Number(e.target.value), unidades) })}
+                  />
+                  <em className={p.radioExtraido ? 'origen origen--plano' : 'origen'}>{p.radioExtraido ? d.delPlano : d.porDefecto}</em>
+                </span>
+                <span className="desarrollo__babd">{`${d.baPorPliegue} ${formatearLongitud(p.baMm, unidades)} · ${d.bdPorPliegue} ${formatearLongitud(p.bdMm, unidades)}`}</span>
+              </div>
+            );
+          }
+          return filas;
         })}
       </div>
 
