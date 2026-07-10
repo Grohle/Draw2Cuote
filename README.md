@@ -4,6 +4,8 @@
 
 > El repositorio se llama `Draw2Cuote` de momento; el nombre del producto es **Draw2Quote**.
 
+**Para ejecutarlo solo necesitas tu clave de API de IA** (o un modelo local con Ollama/LM Studio/vLLM): clona, `npm install`, arranca y configura el proveedor en ⚙ Ajustes. El diseño multi-agente del sistema (extractor + revisor + reglas deterministas + aprendizaje con el uso) está documentado en [ARQUITECTURA.md](ARQUITECTURA.md).
+
 ## Cómo funciona
 
 1. **Arrastra el plano** (PDF, PNG, JPG, WebP · máx. 32 MB) a la zona de carga.
@@ -38,8 +40,9 @@ Los datos que extrae la app son fijos (espesor, material, cantidad…), pero el 
 
 Cuando la pieza es **chapa plegada con al menos un pliegue**, el lector extrae del plano la **geometría de plegado** —las longitudes de los **lados** (tramos rectos), y por cada pliegue su **ángulo** y **radio interior**— y el panel **📐 Desarrollo de chapa** calcula el despliegue **a × b**:
 
-- **Desarrollo (a) = Σ lados (cotas exteriores) − Σ bend deduction**, con `BA = ángulo·(R + K·espesor)` y `BD = 2·(R+espesor)·tan(ángulo/2) − BA`. La anchura (b) es la dimensión sin pliegues.
-- Los lados, ángulos y radios se **leen del plano** (de la vista de perfil/sección) y se muestran marcados como **"del plano"**; los que no aparezcan usan los valores por defecto **90°** y **radio = espesor**, marcados como **"por defecto"**. Todo es editable.
+- **Desarrollo (a) = Σ lados en cota exterior − Σ bend deduction**, con `BA = ángulo·(R + K·espesor)` y `BD = 2·(R+espesor)·tan(ángulo/2) − BA`. La anchura (b) es la dimensión sin pliegues.
+- **Cota interior vs exterior**: el lector detecta si cada cara está acotada por dentro o por fuera del doblado. Las cotas interiores se convierten sumando un espesor por cada pliegue que toca esa cara (una U de espesor 2 con interior 46 mide 46+2+2 = 50 por fuera) y la conversión se muestra junto al lado.
+- El perfil se lista en orden y en vertical — cara 1, ángulo 1, radio 1, cara 2… — con cada valor marcado **"del plano"** si se leyó, o **"por defecto"** (90°, radio = espesor) si no aparece. Todo es editable.
 - El **factor K** (posición de la fibra neutra) se estima por R/espesor (fibra neutra) o se fija manual. El método y las correcciones se guardan automáticamente.
 
 ### Configuración guardada automáticamente
