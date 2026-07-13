@@ -1,0 +1,16 @@
+{
+  "name": "draw2quote-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Empaquetado de escritorio (Electron) de Draw2Quote. Separado del package.json raíz para que la versión web no descargue Electron.",
+  "scripts": {
+    "dev": "electron ..",
+    "build:win": "electron-builder --config electron-builder.yml --win",
+    "build:linux": "electron-builder --config electron-builder.yml --linux",
+    "build:mac": "electron-builder --config electron-builder.yml --mac"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

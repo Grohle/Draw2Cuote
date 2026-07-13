@@ -1,0 +1,32 @@
+# Configuración de electron-builder para el instalable de Draw2Quote.
+# Se ejecuta desde desktop/ pero empaqueta el repositorio completo (app: ..),
+# cuyo package.json raíz declara "main": "desktop/main.cjs".
+appId: com.draw2quote.app
+productName: Draw2Quote
+
+directories:
+  app: ..
+  output: dist
+
+# Solo lo necesario en el paquete: el proceso principal, el servidor, el
+# frontend compilado y las dependencias de producción de la raíz.
+files:
+  - desktop/main.cjs
+  - server/**/*
+  - "!server/datos/**"
+  - web/dist/**/*
+  - package.json
+  - node_modules/**/*
+
+win:
+  target: nsis
+nsis:
+  oneClick: true
+  perMachine: false
+
+linux:
+  target: AppImage
+  category: Office
+
+mac:
+  target: dmg

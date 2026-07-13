@@ -12,12 +12,12 @@
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirDatos } from './almacen.js';
 import { CAMPOS } from './esquema.js';
 
-const AQUI = path.dirname(fileURLToPath(import.meta.url));
-const DIR_DATOS = path.join(AQUI, 'datos');
-const ARCHIVO_FEEDBACK = path.join(DIR_DATOS, 'feedback.jsonl');
+export function archivoFeedback() {
+  return path.join(dirDatos(), 'feedback.jsonl');
+}
 
 const MIN_MUESTRAS_LECCION = 5;
 const TASA_MINIMA_AVISO = 0.2;
@@ -42,7 +42,7 @@ function calcularCamposCorregidos(original, final) {
  * alimenta las lecciones aprendidas en contexto y la calibración.
  */
 export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveedor, modelo, imagen, idioma }) {
-  if (!existsSync(DIR_DATOS)) mkdirSync(DIR_DATOS, { recursive: true });
+  if (!existsSync(dirDatos())) mkdirSync(dirDatos(), { recursive: true });
   const camposCorregidos = calcularCamposCorregidos(extraccionOriginal, extraccionFinal);
   const evento = {
     id: `fb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -55,13 +55,13 @@ export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveed
     campos_corregidos: camposCorregidos,
     imagen: imagen && imagen.mediaType && imagen.dataBase64 ? { mediaType: imagen.mediaType, dataBase64: imagen.dataBase64 } : null,
   };
-  appendFileSync(ARCHIVO_FEEDBACK, JSON.stringify(evento) + '\n', 'utf8');
+  appendFileSync(archivoFeedback(), JSON.stringify(evento) + '\n', 'utf8');
   return { id: evento.id, camposCorregidos };
 }
 
 function leerEventos() {
-  if (!existsSync(ARCHIVO_FEEDBACK)) return [];
-  const lineas = readFileSync(ARCHIVO_FEEDBACK, 'utf8').split('\n');
+  if (!existsSync(archivoFeedback())) return [];
+  const lineas = readFileSync(archivoFeedback(), 'utf8').split('\n');
   const eventos = [];
   for (const linea of lineas) {
     const l = linea.trim();
