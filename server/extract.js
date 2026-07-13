@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { EsquemaExtraccion } from './esquema.js';
-import { construirLeccionesAprendidas } from './feedback.js';
+import { construirEjemplosCorreccion, construirLeccionesAprendidas } from './feedback.js';
 import { mensajes } from './mensajes.js';
 import {
   esProveedorValido,
@@ -150,14 +150,15 @@ function bloqueAlias(alias, idioma) {
 
 /**
  * Prompt de sistema efectivo para esta petición: el prompt base; si hay
- * feedback humano acumulado suficiente, las lecciones destiladas de
- * correcciones previas de usuarios (aprendizaje en contexto sin reentrenar);
- * y los alias de campo configurados por el usuario.
+ * feedback humano acumulado suficiente, las lecciones destiladas (agregadas) y
+ * los ejemplos few-shot (correcciones concretas) de análisis previos —
+ * aprendizaje en contexto sin reentrenar—; y los alias de campo del usuario.
  */
 function construirSystemEfectivo(idioma, alias) {
   const base = sistemaBase(idioma);
   const lecciones = construirLeccionesAprendidas(idioma);
-  return `${base}${lecciones ? `\n\n${lecciones}` : ''}${bloqueAlias(alias, idioma)}`;
+  const ejemplos = construirEjemplosCorreccion(idioma);
+  return `${base}${lecciones ? `\n\n${lecciones}` : ''}${ejemplos ? `\n\n${ejemplos}` : ''}${bloqueAlias(alias, idioma)}`;
 }
 
 /** Prueba de conexión según el proveedor configurado. */

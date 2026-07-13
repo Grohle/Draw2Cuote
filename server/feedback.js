@@ -202,3 +202,56 @@ export function construirLeccionesAprendidas(idioma) {
   if (lecciones.length === 0) return null;
   return `${tx.titulo(eventos.length)}\n${lecciones.slice(0, MAX_LECCIONES).join('\n')}`;
 }
+
+const MAX_EJEMPLOS = 8;
+
+const TEXTOS_EJEMPLO = {
+  es: {
+    titulo:
+      'EJEMPLOS DE CORRECCIONES PREVIAS (few-shot). Son casos reales en los que una lectura del modelo se corrigió a mano. NO copies estos valores —cada plano es distinto— úsalos solo como recordatorio del tipo de error a vigilar y lee con más cuidado esos campos:',
+    linea: (campo, antes, despues) => `- "${campo}": una lectura anterior fue ${antes} y la corrección humana fue ${despues}.`,
+  },
+  en: {
+    titulo:
+      'EXAMPLES OF PREVIOUS CORRECTIONS (few-shot). These are real cases where a model reading was corrected by hand. Do NOT copy these values —every drawing is different— use them only as a reminder of the kind of error to watch for, and read those fields more carefully:',
+    linea: (campo, antes, despues) => `- "${campo}": a previous reading was ${antes} and the human correction was ${despues}.`,
+  },
+};
+
+function formatearValor(valor) {
+  if (valor == null) return 'null';
+  return typeof valor === 'string' ? `"${valor}"` : String(valor);
+}
+
+/**
+ * Inyección dinámica de ejemplos (MICL): recupera correcciones concretas
+ * pasadas y las presenta como ejemplos few-shot en el prompt, para que el
+ * modelo "recuerde" errores previos. Sin base vectorial: la relevancia se
+ * aproxima por recencia y diversidad de campo (los ejemplos más nuevos y sin
+ * repetir), no por similitud visual del recorte (eso queda como hoja de ruta
+ * en ARQUITECTURA.md). Devuelve null si aún no hay muestra suficiente.
+ */
+export function construirEjemplosCorreccion(idioma) {
+  const tx = TEXTOS_EJEMPLO[idioma === 'en' ? 'en' : 'es'];
+  const eventos = leerEventos();
+  if (eventos.length < MIN_MUESTRAS_LECCION) return null;
+
+  const vistos = new Set();
+  const lineas = [];
+  // de los más recientes a los más antiguos, sin repetir el mismo antes→después
+  for (const ev of [...eventos].reverse()) {
+    for (const campo of ev.campos_corregidos ?? []) {
+      const antes = formatearValor(valorDe(ev.extraccion_original, campo));
+      const despues = formatearValor(valorDe(ev.extraccion_final, campo));
+      const clave = `${campo}|${antes}|${despues}`;
+      if (antes === despues || vistos.has(clave)) continue;
+      vistos.add(clave);
+      lineas.push(tx.linea(campo, antes, despues));
+      if (lineas.length >= MAX_EJEMPLOS) break;
+    }
+    if (lineas.length >= MAX_EJEMPLOS) break;
+  }
+
+  if (lineas.length === 0) return null;
+  return `${tx.titulo}\n${lineas.join('\n')}`;
+}
