@@ -194,6 +194,9 @@ const TEXTOS_ES = {
     revisar: '🧠 Revisar la extracción (2ª pasada de razonamiento)',
     revisarNota:
       'Tras leer el plano, el modelo revisa la coherencia de cada campo y vuelve a mirar los de confianza media/baja para confirmarlos o corregirlos. Mejora la fiabilidad a costa de una segunda llamada (más tiempo y coste).',
+    ocr: '🔡 OCR de la imagen como referencia',
+    ocrNota:
+      'Ejecuta OCR (tesseract.js) sobre la imagen y añade el texto detectado al prompt para que el modelo coteje cifras y textos pequeños. Solo imágenes (no PDF); añade unos segundos. Si tesseract no está instalado en el servidor, se ignora sin fallar.',
     conexionOk: 'Conexión correcta con el proveedor.',
     errorConexion: (status: number) => `Error ${status} probando la conexión.`,
     errorServidor: 'No se pudo contactar con el servidor de la app.',
@@ -589,6 +592,9 @@ const TEXTOS_EN: Textos = {
     revisar: '🧠 Review the extraction (2nd reasoning pass)',
     revisarNota:
       'After reading the drawing, the model checks each field for coherence and re-examines the medium/low-confidence ones to confirm or correct them. Improves reliability at the cost of a second call (more time and cost).',
+    ocr: '🔡 OCR the image as reference',
+    ocrNota:
+      'Runs OCR (tesseract.js) on the image and adds the detected text to the prompt so the model can cross-check small figures and texts. Images only (not PDF); adds a few seconds. If tesseract is not installed on the server, it is silently skipped.',
     conexionOk: 'Connection to the provider succeeded.',
     errorConexion: (status: number) => `Error ${status} testing the connection.`,
     errorServidor: 'Could not reach the app server.',
