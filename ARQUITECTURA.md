@@ -25,11 +25,14 @@ Mejora del rendimiento **sin fine-tuning**: el sistema aprende de los errores qu
 |---|---|
 | Captura de correcciones: extracción original vs corregida, campo a campo | `server/feedback.js` → `server/datos/feedback.jsonl` |
 | Destilado del histórico en "lecciones aprendidas" (campos que más se corrigen, transiciones `null → valor`, valores frecuentes por familia) | `construirLeccionesAprendidas()` en `server/feedback.js` |
-| Inyección dinámica en el prompt de sistema de cada análisis nuevo, para cualquier proveedor | `construirSystemEfectivo()` en `server/extract.js` |
+| **Inyección dinámica de ejemplos few-shot**: correcciones concretas pasadas (`campo: antes → después`) presentadas como ejemplos en el prompt, con la instrucción de usarlas como recordatorio del error, no de copiar valores | `construirEjemplosCorreccion()` en `server/feedback.js` |
+| Inyección de ambos bloques en el prompt de sistema de cada análisis nuevo, para cualquier proveedor | `construirSystemEfectivo()` en `server/extract.js` |
 | Calibración medible: % de correcciones por campo y por nivel de confianza | panel **📊 Precisión**, `GET /api/estadisticas` |
 | Export a dataset de fine-tuning real (opcional, con imagen si el usuario lo permite) | `npm run feedback:exportar` |
 
-**Hoja de ruta (nivel visual):** capturar además las coordenadas `[x_min, y_min, x_max, y_max]` del error sobre la imagen, indexar el recorte en una base vectorial (Qdrant / Azure AI Search) y, ante una región visualmente similar, inyectar el ejemplo corregido como few-shot ("en este parche similar la lectura era '8' pero la correcta es 'B'"). No se incluye aún porque exige una base vectorial y un modelo de embeddings de imagen — infraestructura que rompería el requisito de "solo tu clave de API".
+La recuperación de ejemplos aproxima la relevancia por **recencia y diversidad de campo** (los más nuevos sin repetir el mismo `antes→después`), no por similitud visual.
+
+**Hoja de ruta (nivel visual):** el salto pendiente es la dimensión *visual* de esta misma idea — capturar las coordenadas `[x_min, y_min, x_max, y_max]` del error sobre la imagen, indexar el recorte en una base vectorial (Qdrant / Azure AI Search) y, ante una región visualmente similar, recuperar por similitud el ejemplo corregido en vez de por recencia ("en este parche similar la lectura era '8' pero la correcta es 'B'"). No se incluye porque exige una base vectorial y un modelo de embeddings de imagen — infraestructura que rompería el requisito de "solo tu clave de API".
 
 ## 2. Guardarraíles para modelos menos potentes
 
