@@ -8,12 +8,14 @@ export interface AjustesApp {
   modelo: string;
   /** Segunda pasada de razonamiento tras el scan (verifica coherencia y revisa lo dudoso). */
   revisar: boolean;
+  /** OCR de la imagen como texto de referencia en el prompt (solo imágenes; requiere tesseract.js). */
+  ocr: boolean;
 }
 
 const CLAVE_STORAGE = 'draw2quote.ajustes';
 
 export function ajustesPorDefecto(): AjustesApp {
-  return { proveedor: 'anthropic', apiKey: '', baseUrl: '', modelo: presetDe('anthropic').modeloDefecto, revisar: true };
+  return { proveedor: 'anthropic', apiKey: '', baseUrl: '', modelo: presetDe('anthropic').modeloDefecto, revisar: true, ocr: false };
 }
 
 export function cargarAjustes(): AjustesApp {
@@ -28,6 +30,7 @@ export function cargarAjustes(): AjustesApp {
         baseUrl: p.baseUrl ?? '',
         modelo: p.modelo ?? presetDe(proveedor).modeloDefecto,
         revisar: p.revisar !== false, // por defecto activo (migración)
+        ocr: p.ocr === true, // por defecto desactivado (migración)
       };
     }
   } catch {
@@ -50,6 +53,7 @@ export function configApi(ajustes: AjustesApp, idioma: Idioma, alias?: Record<st
     idioma,
     alias,
     revisar: ajustes.revisar,
+    ocr: ajustes.ocr,
   };
 }
 

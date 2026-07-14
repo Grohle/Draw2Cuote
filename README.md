@@ -23,6 +23,10 @@ El presupuesto cubre con fórmula propia la chapa, el corte, el mecanizado y el 
 
 Con la opción **🧠 Revisar la extracción** activada (por defecto), tras leer el plano se hace una **segunda pasada de razonamiento**: el modelo recibe el plano y su primera extracción y **verifica la coherencia de cada campo** (unidades, cotas intercambiadas, familia↔calidad, plausibilidad física) y **vuelve a mirar los campos de confianza media/baja** para confirmarlos o corregirlos. Solo cambia un valor si el plano lo respalda (nunca inventa) y anota cada corrección en las observaciones (`campo: antes → después`). Los resultados revisados muestran el distintivo **🧠 Revisado por IA**. Se puede desactivar en ⚙ Ajustes para ahorrar la segunda llamada; si esa segunda llamada falla, se devuelve la primera extracción sin romper el análisis.
 
+### OCR como referencia (guardarraíl para modelos flojos)
+
+Con la opción **🔡 OCR de la imagen como referencia** activada (desactivada por defecto), antes del scan la imagen se pasa por **Tesseract** (`tesseract.js`, WASM puro, sin binarios de sistema) y el texto reconocido se inyecta en el prompt como referencia cruda —tokens `texto@(x,y)`— para ayudar al modelo a **cotejar cifras y textos pequeños** que un modelo de visión menos potente suele leer mal (no se trata como verdad absoluta). Es una **dependencia opcional**: si no está instalada o falla, el análisis sigue sin OCR. Solo aplica a **imágenes** (no PDF). La primera vez descarga los datos de idioma de su CDN (requiere Internet); en un equipo sin salida a Internet se apunta a una carpeta local con los `.traineddata` mediante la variable `DRAW2QUOTE_TESSDATA`, y el tope de tiempo se ajusta con `DRAW2QUOTE_OCR_TIMEOUT_MS` (45 s por defecto). Ver [ARQUITECTURA.md](ARQUITECTURA.md) § 2.
+
 ### Listado de piezas y exportación
 
 Cada pieza analizada se puede **añadir a un listado (📋)** que muestra el **precio total** del conjunto con las tarifas actuales y se **exporta a CSV o Excel**. La exportación incluye **solo las columnas con algún valor** (las columnas totalmente vacías se omiten). El listado se guarda en el navegador.

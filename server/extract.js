@@ -3,6 +3,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { EsquemaExtraccion } from './esquema.js';
 import { construirEjemplosCorreccion, construirLeccionesAprendidas } from './feedback.js';
 import { mensajes } from './mensajes.js';
+import { ocrImagen } from './ocr.js';
 import {
   esProveedorValido,
   llamarGoogle,
@@ -128,6 +129,14 @@ function instruccionRevision(idioma, previa) {
     : `Revisa y corrige esta primera extracción comparándola con el plano. Primera extracción (JSON):\n${json}`;
 }
 
+/** Bloque de texto OCR (opcional) que se adjunta a la instrucción del usuario como referencia. */
+function bloqueOcr(ocrTexto, idioma) {
+  if (!ocrTexto) return '';
+  return idioma === 'en'
+    ? `\n\nOCR TEXT detected in the image (raw reference, may contain errors; use it to cross-check small figures and texts, NOT as ground truth). Format token@(x,y) with normalized 0-1 position:\n${ocrTexto}`
+    : `\n\nTEXTO OCR detectado en la imagen (referencia cruda, puede tener errores; úsalo para cotejar cifras y textos pequeños, NO como verdad absoluta). Formato token@(x,y) con posición normalizada 0-1:\n${ocrTexto}`;
+}
+
 /**
  * Bloque de alias configurados por el usuario: rótulos concretos con los que
  * sus planos etiquetan cada campo (p. ej. "title", "dwg", "nº", "mark"). Se
@@ -180,11 +189,11 @@ export async function probarProveedor(config) {
   await probarProveedorRemoto(config);
 }
 
-async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idioma, alias, previa }) {
+async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idioma, alias, previa, ocrTexto }) {
   const m = mensajes(idioma);
   const client = crearCliente(apiKey);
   const system = previa ? sistemaRevision(idioma) : construirSystemEfectivo(idioma, alias);
-  const texto = previa ? instruccionRevision(idioma, previa) : INSTRUCCION[idioma === 'en' ? 'en' : 'es'];
+  const texto = (previa ? instruccionRevision(idioma, previa) : INSTRUCCION[idioma === 'en' ? 'en' : 'es']) + bloqueOcr(ocrTexto, idioma);
   const response = await client.messages.parse({
     model: MODELOS_ANTHROPIC.includes(model) ? model : MODELO_DEFECTO,
     max_tokens: 16000,
@@ -216,7 +225,7 @@ async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idiom
  * Proveedores sin structured outputs nativos: se incrusta el esquema JSON en
  * el prompt, se pide modo JSON y se valida la respuesta con Zod en el servidor.
  */
-async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model, idioma, alias, previa }) {
+async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model, idioma, alias, previa, ocrTexto }) {
   const m = mensajes(idioma);
   if (!model || !model.trim()) {
     const err = new Error(m.indicaModelo);
@@ -236,10 +245,11 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
 
   const esquemaJson = zodOutputFormat(EsquemaExtraccion).schema;
   const instruccionBase = previa ? instruccionRevision(idioma, previa) : INSTRUCCION[idioma === 'en' ? 'en' : 'es'];
+  const ocr = bloqueOcr(ocrTexto, idioma);
   const instruccion =
     idioma === 'en'
-      ? `${instruccionBase}\n\nRespond EXCLUSIVELY with a valid JSON object, no markdown or extra text, that exactly matches this JSON Schema:\n${JSON.stringify(esquemaJson)}`
-      : `${instruccionBase}\n\nResponde EXCLUSIVAMENTE con un objeto JSON válido, sin markdown ni texto adicional, que cumpla exactamente este JSON Schema:\n${JSON.stringify(esquemaJson)}`;
+      ? `${instruccionBase}${ocr}\n\nRespond EXCLUSIVELY with a valid JSON object, no markdown or extra text, that exactly matches this JSON Schema:\n${JSON.stringify(esquemaJson)}`
+      : `${instruccionBase}${ocr}\n\nResponde EXCLUSIVAMENTE con un objeto JSON válido, sin markdown ni texto adicional, que cumpla exactamente este JSON Schema:\n${JSON.stringify(esquemaJson)}`;
   const parametros = {
     baseUrl: resolverBaseUrl(proveedor, baseUrl, idioma),
     apiKey,
@@ -266,7 +276,7 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
 }
 
 export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
-  const { proveedor = 'anthropic', apiKey, baseUrl, modelo, idioma, alias, revisar } = config ?? {};
+  const { proveedor = 'anthropic', apiKey, baseUrl, modelo, idioma, alias, revisar, ocr } = config ?? {};
   if (!esProveedorValido(proveedor)) {
     const err = new Error(mensajes(idioma).proveedorDesconocido(proveedor));
     err.status = 400;
@@ -277,14 +287,17 @@ export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
     return { demo: true, revisado: false, datos: idioma === 'en' ? DATOS_DEMO_EN : DATOS_DEMO_ES };
   }
 
+  // Guardarraíl opcional: OCR de la imagen como texto de referencia (solo pasada 1).
+  const ocrTexto = ocr ? await ocrImagen({ mediaType, dataBase64 }) : null;
+
   const comun = { mediaType, dataBase64, apiKey, idioma, alias, model: modelo };
   const extraer = (extra) =>
     proveedor === 'anthropic'
       ? extraerConAnthropic({ ...comun, ...extra })
       : extraerConGenerico({ proveedor, baseUrl, ...comun, ...extra });
 
-  // Pasada 1: scan del plano.
-  const datos1 = await extraer({});
+  // Pasada 1: scan del plano (con el texto OCR si está disponible).
+  const datos1 = await extraer({ ocrTexto });
   if (revisar === false) {
     return { demo: false, revisado: false, datos: datos1 };
   }

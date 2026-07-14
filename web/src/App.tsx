@@ -114,7 +114,7 @@ export default function App() {
       version: 1,
       idioma,
       unidades,
-      ajustes: { proveedor: ajustes.proveedor, baseUrl: ajustes.baseUrl, modelo: ajustes.modelo, revisar: ajustes.revisar },
+      ajustes: { proveedor: ajustes.proveedor, baseUrl: ajustes.baseUrl, modelo: ajustes.modelo, revisar: ajustes.revisar, ocr: ajustes.ocr },
       tarifas,
       camposPersonalizados,
       desplegado,

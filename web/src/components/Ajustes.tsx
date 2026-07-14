@@ -41,6 +41,7 @@ export function Ajustes({ serverKey, onCerrar, t, idioma }: Props) {
       baseUrl: ajustes.baseUrl.trim(),
       modelo: ajustes.modelo.trim(),
       revisar: ajustes.revisar,
+      ocr: ajustes.ocr,
     };
     guardarAjustes(limpios);
     onCerrar(limpios);
@@ -141,6 +142,12 @@ export function Ajustes({ serverKey, onCerrar, t, idioma }: Props) {
           {a.revisar}
         </label>
         <p className="modal__nota">{a.revisarNota}</p>
+
+        <label className="modal__check">
+          <input type="checkbox" checked={ajustes.ocr} onChange={(e) => cambiar({ ocr: e.target.checked })} />
+          {a.ocr}
+        </label>
+        <p className="modal__nota">{a.ocrNota}</p>
 
         {prueba && <p className={`modal__prueba ${prueba.ok ? 'modal__prueba--ok' : 'modal__prueba--error'}`}>{prueba.msg}</p>}
 
