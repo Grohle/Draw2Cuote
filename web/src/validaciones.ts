@@ -102,7 +102,7 @@ export function validar(datos: Extraccion, t: Textos, unidades: SistemaUnidades)
   }
 
   // Campos con confianza baja pendientes de revisión manual
-  for (const [clave, etiqueta] of Object.entries(v.etiquetasCampo) as [Exclude<keyof Extraccion, 'observaciones' | 'desarrollo' | 'sistema_unidades'>, string][]) {
+  for (const [clave, etiqueta] of Object.entries(v.etiquetasCampo) as [Exclude<keyof Extraccion, 'observaciones' | 'desarrollo' | 'sistema_unidades' | 'campos_extra'>, string][]) {
     if (!campoAplica(clave, tipo)) continue;
     const campo = datos[clave];
     if (typeof campo === 'object' && !Array.isArray(campo) && campo.confianza === 'baja' && !campo.editado) {

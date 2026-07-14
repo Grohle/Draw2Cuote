@@ -1,3 +1,4 @@
+import type { CampoExtra } from './creadorCampos';
 import type { Textos } from './i18n';
 
 /** Claves de los campos estructurados (las mismas que en t.campos). */
@@ -10,7 +11,10 @@ export interface CampoPersonalizado {
   alias?: string[];
 }
 
-export type CamposPersonalizados = Partial<Record<ClaveCampo, CampoPersonalizado>>;
+export type CamposPersonalizados = Partial<Record<ClaveCampo, CampoPersonalizado>> & {
+  /** Campos adicionales creados por el creador de campos (skill), a mano o tras un análisis. */
+  extra?: CampoExtra[];
+};
 
 /** Orden y agrupación de los campos en el editor, coherente con Resultados. */
 export const CLAVES_CAMPO: ClaveCampo[] = [
@@ -80,9 +84,15 @@ export function textoAAlias(texto: string): string[] {
  */
 export function aliasParaServidor(cp: CamposPersonalizados): Record<string, string[]> | undefined {
   const out: Record<string, string[]> = {};
-  for (const clave of Object.keys(cp) as ClaveCampo[]) {
+  for (const clave of CLAVES_CAMPO) {
     const alias = (cp[clave]?.alias ?? []).map((a) => a.trim()).filter(Boolean);
     if (alias.length) out[clave] = alias;
   }
   return Object.keys(out).length ? out : undefined;
+}
+
+/** Nombres de los campos adicionales ya definidos, para que el lector los reutilice tal cual. */
+export function camposExtraParaServidor(cp: CamposPersonalizados): string[] | undefined {
+  const nombres = (cp.extra ?? []).map((c) => c.nombre.trim()).filter(Boolean);
+  return nombres.length ? nombres : undefined;
 }

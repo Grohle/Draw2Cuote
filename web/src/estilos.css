@@ -1069,3 +1069,204 @@ body {
   gap: 0.75rem;
   justify-content: flex-end;
 }
+
+/* Cola de planos: lista bajo el botón de analizar, desplazable y filtrable */
+.cola {
+  margin-top: 1rem;
+}
+
+.cola__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.cola__titulo {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.cola__contador {
+  color: var(--texto-suave);
+  font-weight: normal;
+  font-size: 0.82rem;
+}
+
+.cola__filtro {
+  max-width: 12rem;
+}
+
+.cola__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 46vh; /* la lista se desplaza con la rueda del ratón */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cola__item {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+}
+
+.cola__item:hover {
+  border-color: var(--texto-suave);
+}
+
+.cola__item--activa {
+  border-color: var(--acento);
+}
+
+/* Barra de estado fina ENCIMA del nombre: vacía en cola, animada al trabajar, llena al acabar */
+.cola__barra {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.cola__barra-relleno {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.cola__barra-relleno--activa {
+  background: var(--acento);
+  animation: cola-pulso 1.2s ease-in-out infinite;
+}
+
+.cola__barra-relleno--preparando {
+  background: var(--texto-suave);
+  animation: cola-pulso 1.2s ease-in-out infinite;
+}
+
+.cola__barra-relleno--preparada {
+  background: var(--texto-suave);
+}
+
+.cola__barra-relleno--hecha {
+  background: var(--ok);
+}
+
+.cola__barra-relleno--error {
+  background: var(--peligro);
+}
+
+@keyframes cola-pulso {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.cola__fila {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cola__nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.cola__quitar {
+  background: none;
+  border: none;
+  color: var(--texto-suave);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0 0.2rem;
+}
+
+.cola__quitar:hover:not(:disabled) {
+  color: var(--peligro);
+}
+
+.cola__quitar:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cola__detalle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  overflow: hidden;
+}
+
+.cola__estado--hecho {
+  color: var(--ok);
+}
+
+.cola__estado--error {
+  color: var(--peligro);
+}
+
+.cola__estado--analizando {
+  color: var(--acento);
+}
+
+.cola__error {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cola__sinresultados {
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+}
+
+/* Campos adicionales (creador de campos) en el modal 🏷 Campos */
+.campos-extra__titulo {
+  margin: 1.1rem 0 0.3rem;
+  font-size: 0.95rem;
+}
+
+.campos-extra__lista {
+  list-style: none;
+  margin: 0.4rem 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.campos-extra__item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: 0.2rem 0.4rem 0.2rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.campos-extra__nuevo {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.campos-extra__nuevo input {
+  flex: 1;
+}

@@ -7,6 +7,7 @@ import { EsquemaExtraccion, extraerDatosPlano, hayClaveServidor, probarProveedor
 import { calcularEstadisticas, registrarFeedback } from './feedback.js';
 import { leerConfig, guardarConfig } from './config.js';
 import { mensajes } from './mensajes.js';
+import { ocrImagen } from './ocr.js';
 
 const PORT = process.env.PORT || 3001;
 const MAX_BYTES = 32 * 1024 * 1024; // límite de la API para PDF
@@ -62,8 +63,13 @@ app.post('/api/extract', async (req, res) => {
     return res.status(413).json({ error: m.archivoDemasiadoGrande });
   }
 
+  // Si el cliente ya pre-procesó el OCR de esta pieza (cola), lo trae en el
+  // body y no se repite aquí: string con el texto, o null si su OCR no dio nada.
+  const tieneOcrPrevio = Object.hasOwn(req.body ?? {}, 'ocrTexto');
+  const ocrPrevio = tieneOcrPrevio ? (typeof req.body.ocrTexto === 'string' ? req.body.ocrTexto : null) : undefined;
+
   try {
-    const resultado = await extraerDatosPlano({ mediaType, dataBase64, config });
+    const resultado = await extraerDatosPlano({ mediaType, dataBase64, config, ocrPrevio });
     res.json(resultado);
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
@@ -82,6 +88,23 @@ app.post('/api/extract', async (req, res) => {
     console.error('[extract]', err);
     res.status(status).json({ error: err.message || m.errorInesperado });
   }
+});
+
+// Pre-procesado de la cola de planos: el cliente pide el OCR de una pieza por
+// adelantado mientras la IA analiza otra, y luego lo envía ya hecho a /api/extract.
+// Devuelve { texto: string | null } — null si el OCR no aplica o no está disponible.
+app.post('/api/ocr', async (req, res) => {
+  const { mediaType, dataBase64 } = req.body ?? {};
+  const m = mensajes(req.body?.idioma);
+  if (!mediaType || !dataBase64) {
+    return res.status(400).json({ error: m.faltanDatos });
+  }
+  if (dataBase64.length * 0.75 > MAX_BYTES) {
+    return res.status(413).json({ error: m.archivoDemasiadoGrande });
+  }
+  // ocrImagen ya filtra tipos no admitidos (PDF → null) y nunca lanza.
+  const texto = await ocrImagen({ mediaType, dataBase64 });
+  res.json({ texto });
 });
 
 // Bucle de aprendizaje: el usuario confirma o corrige una extracción ya revisada.

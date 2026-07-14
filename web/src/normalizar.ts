@@ -32,6 +32,21 @@ export function normalizarExtraccion(datos: unknown): Extraccion {
 
   salida.desarrollo = normalizarDesarrollo(fuente.desarrollo);
 
+  // campos adicionales: solo entradas con nombre; el valor puede ser null
+  salida.campos_extra = Array.isArray(fuente.campos_extra)
+    ? (fuente.campos_extra as unknown[])
+        .map((c) => {
+          const o = (c && typeof c === 'object' ? c : {}) as Record<string, unknown>;
+          return {
+            nombre: typeof o.nombre === 'string' ? o.nombre.trim() : '',
+            valor: typeof o.valor === 'string' ? o.valor : null,
+            confianza: CONFIANZAS.includes(o.confianza as Confianza) ? (o.confianza as Confianza) : 'media',
+            ...(o.editado ? { editado: true } : {}),
+          };
+        })
+        .filter((c) => c.nombre)
+    : [];
+
   salida.observaciones = Array.isArray(fuente.observaciones)
     ? (fuente.observaciones as unknown[]).filter((o): o is string => typeof o === 'string')
     : [];

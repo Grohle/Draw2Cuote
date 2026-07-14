@@ -120,6 +120,19 @@ export const EsquemaExtraccion = z.object({
         .describe('SOLO chapa plegada. Un elemento por pliegue con su ángulo y radio interior; tantos como num_pliegues. Lista vacía si no aplica o no se lee.'),
     })
     .describe('Geometría de plegado para calcular el desarrollo (desplegado). Solo para chapa plegada; en otros tipos ambas listas van vacías.'),
+  campos_extra: z
+    .array(
+      z.object({
+        nombre: z
+          .string()
+          .describe('Nombre corto y claro del dato, basado en el rótulo del plano (p. ej. "peso", "escala", "tratamiento térmico", "norma de soldadura").'),
+        valor: z.string().nullable().describe('Valor literal tal como figura en el plano. null si el rótulo existe pero el valor no es legible.'),
+        confianza,
+      })
+    )
+    .describe(
+      'SOLO datos claramente rotulados en el cajetín o las notas que NO correspondan a NINGÚN otro campo del esquema (p. ej. peso, escala, tratamiento térmico, norma aplicable). Si las instrucciones listan campos adicionales ya definidos por el usuario, usa EXACTAMENTE esos nombres cuando el dato coincida. NUNCA dupliques aquí información que ya va en otro campo. Lista vacía si no hay.'
+    ),
   observaciones: z
     .array(z.string())
     .describe(
@@ -129,5 +142,5 @@ export const EsquemaExtraccion = z.object({
 
 /** Nombres de los campos escalares de la extracción (los de tipo { valor, confianza }). */
 export const CAMPOS = Object.keys(EsquemaExtraccion.shape).filter(
-  (c) => c !== 'observaciones' && c !== 'desarrollo' && c !== 'sistema_unidades'
+  (c) => c !== 'observaciones' && c !== 'desarrollo' && c !== 'sistema_unidades' && c !== 'campos_extra'
 );

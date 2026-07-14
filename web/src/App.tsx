@@ -1,19 +1,23 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { cargarAjustes, configApi, esModoDemo, guardarAjustes, type AjustesApp } from './ajustes';
 import {
   aliasParaServidor,
+  camposExtraParaServidor,
   cargarCamposPersonalizados,
   guardarCamposPersonalizados,
   type CamposPersonalizados,
 } from './camposPersonalizados';
+import { crearPieza, type PiezaCola, type ResultadoPieza } from './cola';
 import { Ajustes } from './components/Ajustes';
 import { Calibracion } from './components/Calibracion';
 import { Campos } from './components/Campos';
 import { Dropzone, type ArchivoPlano } from './components/Dropzone';
+import { ListaCola } from './components/ListaCola';
 import { Listado } from './components/Listado';
 import { type EstadoFeedback, Resultados } from './components/Resultados';
 import { Tarifas as ModalTarifas } from './components/Tarifas';
 import { cargarConfigArchivo, guardarConfigArchivo, sinPreferenciasLocales } from './configArchivo';
+import { procesarPropuestas } from './creadorCampos';
 import { cargarDesplegado, guardarDesplegado, type OpcionesDesplegado } from './desplegado';
 import { cargarIdioma, guardarIdioma, obtenerTextos, type Idioma } from './i18n';
 import { cargarListado, guardarListado, type ItemListado } from './listado';
@@ -29,11 +33,10 @@ function conNegritas(texto: string): ReactNode[] {
 }
 
 export default function App() {
-  const [archivo, setArchivo] = useState<ArchivoPlano | null>(null);
-  const [datos, setDatos] = useState<Extraccion | null>(null);
-  const [datosOriginales, setDatosOriginales] = useState<Extraccion | null>(null);
-  const [demo, setDemo] = useState(false);
-  const [revisado, setRevisado] = useState(false);
+  // Cola de planos: cada archivo subido es una pieza; la IA las analiza en orden.
+  const [cola, setCola] = useState<PiezaCola[]>([]);
+  const [seleccionada, setSeleccionada] = useState<string | null>(null);
+  const [enCursoId, setEnCursoId] = useState<string | null>(null);
   const [serverKey, setServerKey] = useState(false);
   const [ajustes, setAjustes] = useState<AjustesApp>(() => cargarAjustes());
   const [tarifas, setTarifas] = useState<Tarifas>(() => cargarTarifas());
@@ -54,6 +57,16 @@ export default function App() {
   const [mensajeFeedback, setMensajeFeedback] = useState<string | null>(null);
   const [incluirImagenFeedback, setIncluirImagenFeedback] = useState(false);
   const [hidratado, setHidratado] = useState(false);
+
+  // Refs espejo para el bucle asíncrono de la cola (los closures de un bucle
+  // largo verían estados desactualizados; la ref siempre tiene el valor vivo).
+  const colaRef = useRef<PiezaCola[]>([]);
+  const seleccionadaRef = useRef<string | null>(null);
+  const cpRef = useRef<CamposPersonalizados>(camposPersonalizados);
+  const enMarchaRef = useRef(false);
+  const prepEnCursoRef = useRef(false);
+  /** Promesas del pre-OCR por pieza, para que el análisis espere al suyo si sigue en curso. */
+  const prepRef = useRef(new Map<string, Promise<string | null>>());
 
   const t = obtenerTextos(idioma);
 
@@ -86,6 +99,7 @@ export default function App() {
           }
           if (cfg.camposPersonalizados) {
             setCamposPersonalizados(cfg.camposPersonalizados);
+            cpRef.current = cfg.camposPersonalizados;
             guardarCamposPersonalizados(cfg.camposPersonalizados);
           }
           if (cfg.desplegado) {
@@ -121,10 +135,10 @@ export default function App() {
     });
   }, [hidratado, idioma, unidades, ajustes, tarifas, camposPersonalizados, desplegado]);
 
-  // Progreso del análisis: avanza de forma asintótica hacia el 90% mientras se
-  // espera la respuesta (una sola petición al servidor) y salta al 100% al llegar.
+  // Progreso del análisis de la pieza en curso: avanza de forma asintótica
+  // hacia el 90% mientras se espera la respuesta y se reinicia con cada pieza.
   useEffect(() => {
-    if (!analizando) return;
+    if (!analizando || !enCursoId) return;
     const inicio = Date.now();
     setProgreso(4);
     const timer = setInterval(() => {
@@ -132,7 +146,14 @@ export default function App() {
       setProgreso(Math.min(90, 4 + 86 * (1 - Math.exp(-segundos / 20))));
     }, 250);
     return () => clearInterval(timer);
-  }, [analizando]);
+  }, [analizando, enCursoId]);
+
+  // Al cambiar de pieza seleccionada, el estado del feedback vuelve a empezar.
+  useEffect(() => {
+    setEstadoFeedback('inactivo');
+    setMensajeFeedback(null);
+    setIncluirImagenFeedback(false);
+  }, [seleccionada]);
 
   /** Etapa mostrada bajo la barra según el % y si hay 2ª pasada de revisión. */
   const etapaAnalisis = (pct: number): string => {
@@ -146,7 +167,27 @@ export default function App() {
   const preset = presetDe(ajustes.proveedor);
   const nombreProveedor = presetTextos(ajustes.proveedor, t).nombre;
   const sinCredenciales = esModoDemo(ajustes, serverKey);
+
+  const piezaSeleccionada = cola.find((p) => p.id === seleccionada) ?? null;
+  const archivo = piezaSeleccionada?.archivo ?? null;
+  const resultadoSel = piezaSeleccionada?.resultado ?? null;
   const pdfNoAdmitido = archivo?.mediaType === 'application/pdf' && !preset.admitePdf;
+  const pendientes = cola.filter((p) => p.analisis === 'pendiente').length;
+  const indiceEnCurso = cola.findIndex((p) => p.id === enCursoId);
+
+  /** Toda mutación de la cola pasa por aquí: la ref es la fuente de verdad del bucle. */
+  const mutarCola = (fn: (prev: PiezaCola[]) => PiezaCola[]) => {
+    colaRef.current = fn(colaRef.current);
+    setCola(colaRef.current);
+  };
+
+  const parchearPieza = (id: string, parche: Partial<PiezaCola>) =>
+    mutarCola((prev) => prev.map((p) => (p.id === id ? { ...p, ...parche } : p)));
+
+  const seleccionar = (id: string | null) => {
+    seleccionadaRef.current = id;
+    setSeleccionada(id);
+  };
 
   const cambiarIdioma = (nuevo: Idioma) => {
     setIdioma(nuevo);
@@ -159,6 +200,7 @@ export default function App() {
   };
 
   const cambiarCamposPersonalizados = (nuevos: CamposPersonalizados) => {
+    cpRef.current = nuevos;
     setCamposPersonalizados(nuevos);
     guardarCamposPersonalizados(nuevos);
   };
@@ -179,25 +221,79 @@ export default function App() {
     actualizarListado([...listado, item]);
   };
 
-  const analizar = async () => {
-    if (!archivo) return;
-    setAnalizando(true);
+  const anadirPlano = (a: ArchivoPlano) => {
+    const pieza = crearPieza(a);
+    mutarCola((prev) => [...prev, pieza]);
+    if (!seleccionadaRef.current) seleccionar(pieza.id);
     setError(null);
-    setDatos(null);
-    setDatosOriginales(null);
-    setEstadoFeedback('inactivo');
-    setMensajeFeedback(null);
-    setIncluirImagenFeedback(false);
+  };
+
+  const quitarPieza = (id: string) => {
+    prepRef.current.delete(id);
+    mutarCola((prev) => prev.filter((p) => p.id !== id));
+    if (seleccionadaRef.current === id) seleccionar(colaRef.current[0]?.id ?? null);
+  };
+
+  /**
+   * Carril adelantado de la cola: mientras la IA analiza una pieza, se va
+   * ejecutando el OCR de las siguientes (de una en una: el worker es único),
+   * de modo que cada análisis llegue con ese trabajo ya hecho.
+   */
+  const prepararPieza = (pieza: PiezaCola): Promise<string | null> => {
+    parchearPieza(pieza.id, { preparacion: 'encurso' });
+    const promesa = fetch('/api/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mediaType: pieza.archivo.mediaType, dataBase64: pieza.archivo.dataBase64, idioma }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cuerpo) => (typeof cuerpo?.texto === 'string' ? (cuerpo.texto as string) : null))
+      .catch(() => null);
+    prepRef.current.set(pieza.id, promesa);
+    promesa.then((texto) => parchearPieza(pieza.id, { preparacion: 'lista', ocrTexto: texto }));
+    return promesa;
+  };
+
+  const lanzarPreparacion = () => {
+    if (prepEnCursoRef.current || !ajustes.ocr) return;
+    prepEnCursoRef.current = true;
+    (async () => {
+      try {
+        while (enMarchaRef.current) {
+          const objetivo = colaRef.current.find((p) => p.analisis === 'pendiente' && p.preparacion === 'pendiente');
+          if (!objetivo) break;
+          await prepararPieza(objetivo);
+        }
+      } finally {
+        prepEnCursoRef.current = false;
+      }
+    })();
+  };
+
+  /** Analiza una pieza de la cola (una llamada a /api/extract, con su OCR si ya está hecho). */
+  const analizarPieza = async (pieza: PiezaCola) => {
+    if (pieza.archivo.mediaType === 'application/pdf' && !preset.admitePdf) {
+      parchearPieza(pieza.id, { analisis: 'error', error: t.app.pdfNoAdmitido(nombreProveedor) });
+      return;
+    }
+    parchearPieza(pieza.id, { analisis: 'analizando' });
+    setEnCursoId(pieza.id);
     try {
+      // si el pre-OCR de esta pieza está en curso o hecho, se aprovecha aquí
+      const prep = prepRef.current.get(pieza.id);
+      const ocrTexto = prep ? await prep : undefined;
+      const body: Record<string, unknown> = {
+        filename: pieza.archivo.nombre,
+        mediaType: pieza.archivo.mediaType,
+        dataBase64: pieza.archivo.dataBase64,
+        config: configApi(ajustes, idioma, aliasParaServidor(cpRef.current), camposExtraParaServidor(cpRef.current)),
+      };
+      if (ocrTexto !== undefined) body.ocrTexto = ocrTexto;
+
       const res = await fetch('/api/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: archivo.nombre,
-          mediaType: archivo.mediaType,
-          dataBase64: archivo.dataBase64,
-          config: configApi(ajustes, idioma, aliasParaServidor(camposPersonalizados)),
-        }),
+        body: JSON.stringify(body),
       });
       const cuerpo = await res.json().catch(() => null);
       if (!res.ok) {
@@ -206,25 +302,65 @@ export default function App() {
       const respuesta = cuerpo as RespuestaExtraccion;
       // normaliza por si el backend/proveedor devuelve un esquema distinto: así
       // un campo ausente no revienta el render (la app quedaría en blanco)
-      const datosNormalizados = normalizarExtraccion(respuesta.datos);
-      setDatos(datosNormalizados);
-      // copia independiente: "datos" se mutará con las correcciones del usuario
-      setDatosOriginales(JSON.parse(JSON.stringify(datosNormalizados)));
-      setDemo(respuesta.demo);
-      setRevisado(Boolean(respuesta.revisado));
-      // si el plano trae un sistema de unidades detectado, ajusta la vista a él
-      if (datosNormalizados.sistema_unidades && datosNormalizados.sistema_unidades !== unidades) {
-        cambiarUnidades(datosNormalizados.sistema_unidades);
+      const datos = normalizarExtraccion(respuesta.datos);
+
+      // Creador de campos (skill): si el plano trae datos rotulados que no
+      // encajan en ningún campo, se crean como campos adicionales — con
+      // normalización, anti-duplicados y límites. Los nuevos nombres entran en
+      // el prompt de las siguientes piezas de la cola.
+      const propuestas = datos.campos_extra.map((c) => c.nombre);
+      if (propuestas.length) {
+        const creacion = procesarPropuestas(propuestas, cpRef.current);
+        if (creacion.creados.length) {
+          cambiarCamposPersonalizados({ ...cpRef.current, extra: [...(cpRef.current.extra ?? []), ...creacion.creados] });
+        }
+      }
+
+      const resultado: ResultadoPieza = {
+        datos,
+        datosOriginales: JSON.parse(JSON.stringify(datos)),
+        demo: respuesta.demo,
+        revisado: Boolean(respuesta.revisado),
+      };
+      parchearPieza(pieza.id, { analisis: 'hecho', resultado });
+      if (!seleccionadaRef.current) seleccionar(pieza.id);
+      // si el plano trae unidades detectadas y es la pieza a la vista, ajusta la vista
+      if (seleccionadaRef.current === pieza.id && datos.sistema_unidades && datos.sistema_unidades !== unidades) {
+        cambiarUnidades(datos.sistema_unidades);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error inesperado analizando el plano.');
+      parchearPieza(pieza.id, {
+        analisis: 'error',
+        error: e instanceof Error ? e.message : 'Error inesperado analizando el plano.',
+      });
     } finally {
+      setEnCursoId(null);
+    }
+  };
+
+  /** Recorre la cola: analiza pendientes en orden mientras el carril de OCR va por delante. */
+  const procesarCola = async () => {
+    if (enMarchaRef.current) return;
+    enMarchaRef.current = true;
+    setAnalizando(true);
+    setError(null);
+    try {
+      while (true) {
+        lanzarPreparacion();
+        const pieza = colaRef.current.find((p) => p.analisis === 'pendiente');
+        if (!pieza) break;
+        await analizarPieza(pieza);
+      }
+    } finally {
+      enMarchaRef.current = false;
       setAnalizando(false);
     }
   };
 
   const cambiarDatos = (nuevos: Extraccion) => {
-    setDatos(nuevos);
+    const id = seleccionadaRef.current;
+    if (!id) return;
+    mutarCola((prev) => prev.map((p) => (p.id === id && p.resultado ? { ...p, resultado: { ...p.resultado, datos: nuevos } } : p)));
     // si el usuario sigue editando después de guardar, permite guardar de nuevo
     if (estadoFeedback !== 'inactivo') {
       setEstadoFeedback('inactivo');
@@ -233,19 +369,21 @@ export default function App() {
   };
 
   const guardarFeedback = async () => {
-    if (!datos || !datosOriginales) return;
+    if (!piezaSeleccionada || !resultadoSel) return;
     setEstadoFeedback('guardando');
     try {
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          extraccionOriginal: datosOriginales,
-          extraccionFinal: datos,
+          extraccionOriginal: resultadoSel.datosOriginales,
+          extraccionFinal: resultadoSel.datos,
           proveedor: ajustes.proveedor,
           modelo: ajustes.modelo || preset.modeloDefecto,
           idioma,
-          imagen: incluirImagenFeedback && archivo ? { mediaType: archivo.mediaType, dataBase64: archivo.dataBase64 } : undefined,
+          imagen: incluirImagenFeedback
+            ? { mediaType: piezaSeleccionada.archivo.mediaType, dataBase64: piezaSeleccionada.archivo.dataBase64 }
+            : undefined,
         }),
       });
       const cuerpo = await res.json().catch(() => null);
@@ -260,6 +398,14 @@ export default function App() {
       setEstadoFeedback('error');
     }
   };
+
+  const etiquetaAnalizar = analizando
+    ? indiceEnCurso >= 0
+      ? t.app.analizandoPieza(indiceEnCurso + 1, cola.length)
+      : t.app.analizando
+    : pendientes > 1
+      ? t.app.botonAnalizarN(pendientes)
+      : t.app.botonAnalizar;
 
   return (
     <div className="app">
@@ -344,20 +490,10 @@ export default function App() {
 
       <main className="contenido">
         <div className="columna columna--plano">
-          <Dropzone
-            archivo={archivo}
-            t={t}
-            onArchivo={(a) => {
-              setArchivo(a);
-              setDatos(null);
-              setDatosOriginales(null);
-              setError(null);
-            }}
-            onError={setError}
-          />
+          <Dropzone archivo={archivo} t={t} onArchivo={anadirPlano} onError={setError} />
           {pdfNoAdmitido && <div className="error">⚠ {t.app.pdfNoAdmitido(nombreProveedor)}</div>}
-          <button className="btn btn--primario btn--analizar" onClick={analizar} disabled={!archivo || analizando || pdfNoAdmitido}>
-            {analizando ? t.app.analizando : t.app.botonAnalizar}
+          <button className="btn btn--primario btn--analizar" onClick={procesarCola} disabled={pendientes === 0 || analizando}>
+            {etiquetaAnalizar}
           </button>
           {analizando && (
             <div className="progreso">
@@ -371,15 +507,23 @@ export default function App() {
             </div>
           )}
           {error && <div className="error">⚠ {error}</div>}
+          <ListaCola
+            piezas={cola}
+            seleccionada={seleccionada}
+            onSeleccionar={seleccionar}
+            onQuitar={quitarPieza}
+            progresoActual={progreso}
+            t={t}
+          />
         </div>
 
         <div className="columna columna--datos">
-          {datos ? (
+          {resultadoSel ? (
             <Resultados
-              datos={datos}
+              datos={resultadoSel.datos}
               onCambio={cambiarDatos}
-              demo={demo}
-              revisado={revisado}
+              demo={resultadoSel.demo}
+              revisado={resultadoSel.revisado}
               onGuardarFeedback={guardarFeedback}
               estadoFeedback={estadoFeedback}
               mensajeFeedback={mensajeFeedback}

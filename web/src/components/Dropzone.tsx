@@ -22,24 +22,27 @@ export function Dropzone({ archivo, onArchivo, onError, t }: Props) {
   const [arrastrando, setArrastrando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // admite soltar/seleccionar varios planos a la vez: cada uno entra en la cola
   const procesar = useCallback(
-    (file: File) => {
-      if (!TIPOS.includes(file.type)) {
-        onError(t.dropzone.formatoNoAdmitido(file.type || t.dropzone.desconocido));
-        return;
+    (files: Iterable<File>) => {
+      for (const file of files) {
+        if (!TIPOS.includes(file.type)) {
+          onError(t.dropzone.formatoNoAdmitido(file.type || t.dropzone.desconocido));
+          continue;
+        }
+        if (file.size > MAX_BYTES) {
+          onError(t.dropzone.archivoDemasiadoGrande);
+          continue;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const dataBase64 = dataUrl.split(',', 2)[1] ?? '';
+          onArchivo({ nombre: file.name, mediaType: file.type, dataBase64, dataUrl });
+        };
+        reader.onerror = () => onError(t.dropzone.noSePudoLeer);
+        reader.readAsDataURL(file);
       }
-      if (file.size > MAX_BYTES) {
-        onError(t.dropzone.archivoDemasiadoGrande);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        const dataBase64 = dataUrl.split(',', 2)[1] ?? '';
-        onArchivo({ nombre: file.name, mediaType: file.type, dataBase64, dataUrl });
-      };
-      reader.onerror = () => onError(t.dropzone.noSePudoLeer);
-      reader.readAsDataURL(file);
     },
     [onArchivo, onError, t]
   );
@@ -55,8 +58,7 @@ export function Dropzone({ archivo, onArchivo, onError, t }: Props) {
       onDrop={(e) => {
         e.preventDefault();
         setArrastrando(false);
-        const file = e.dataTransfer.files[0];
-        if (file) procesar(file);
+        if (e.dataTransfer.files.length) procesar(e.dataTransfer.files);
       }}
       onClick={() => inputRef.current?.click()}
       role="button"
@@ -69,10 +71,10 @@ export function Dropzone({ archivo, onArchivo, onError, t }: Props) {
         ref={inputRef}
         type="file"
         accept=".pdf,image/png,image/jpeg,image/webp,image/gif"
+        multiple
         hidden
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) procesar(file);
+          if (e.target.files?.length) procesar(e.target.files);
           e.target.value = '';
         }}
       />

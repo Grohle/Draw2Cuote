@@ -44,7 +44,7 @@ export function guardarAjustes(ajustes: AjustesApp): void {
 }
 
 /** Configuración que viaja al servidor con cada análisis / prueba de conexión */
-export function configApi(ajustes: AjustesApp, idioma: Idioma, alias?: Record<string, string[]>) {
+export function configApi(ajustes: AjustesApp, idioma: Idioma, alias?: Record<string, string[]>, camposExtra?: string[]) {
   return {
     proveedor: ajustes.proveedor,
     apiKey: ajustes.apiKey || undefined,
@@ -52,6 +52,7 @@ export function configApi(ajustes: AjustesApp, idioma: Idioma, alias?: Record<st
     modelo: ajustes.modelo || undefined,
     idioma,
     alias,
+    camposExtra,
     revisar: ajustes.revisar,
     ocr: ajustes.ocr,
   };
