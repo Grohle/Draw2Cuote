@@ -4,6 +4,7 @@ import { calcularPresupuesto } from '../presupuesto';
 import type { Tarifas } from '../tarifas';
 import type { Extraccion } from '../tipos';
 import type { SistemaUnidades } from '../unidades';
+import { IconoPresupuesto } from './Iconos';
 
 const euros = (n: number) => n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 
@@ -21,7 +22,9 @@ export function Presupuesto({ datos, tarifas, onAbrirTarifas, t, unidades }: Pro
 
   return (
     <fieldset className="grupo">
-      <legend>{p.titulo}</legend>
+      <legend>
+        <IconoPresupuesto tamano={14} /> {p.titulo}
+      </legend>
       {!resultado.calculable ? (
         <p className="presupuesto__incompleto">
           {p.incompleto}{' '}

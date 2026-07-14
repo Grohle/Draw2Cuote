@@ -2,6 +2,7 @@ import { calcularDesarrollo, ladoExteriorMm, radioPorDefecto, type MetodoDespleg
 import type { Textos } from '../i18n';
 import type { DesarrolloGeom, Extraccion, LadoGeom } from '../tipos';
 import { etiquetaLongitud, formatearLongitud, mmAUnidadMostrada, unidadMostradaAMm, type SistemaUnidades } from '../unidades';
+import { IconoDesarrollo } from './Iconos';
 
 interface Props {
   datos: Extraccion;
@@ -126,7 +127,9 @@ export function Desarrollo({ datos, onCambio, unidades, opciones, onCambioOpcion
 
   return (
     <fieldset className="grupo">
-      <legend>{d.titulo}</legend>
+      <legend>
+        <IconoDesarrollo tamano={14} /> {d.titulo}
+      </legend>
       <p className="desarrollo__pliegues">{d.numPliegues(numPliegues)}</p>
 
       <div className="desarrollo__opciones">

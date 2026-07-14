@@ -43,6 +43,7 @@ body {
 .cabecera h1 {
   margin: 0;
   font-size: 1.7rem;
+  font-weight: 650;
   letter-spacing: -0.02em;
 }
 
@@ -59,7 +60,8 @@ body {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .cabecera__demo {
@@ -73,14 +75,22 @@ body {
 }
 
 .btn--ajustes {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.9rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.86rem;
+  color: var(--texto-suave);
+  background: transparent;
+}
+
+.btn--ajustes:hover {
+  color: var(--texto);
+  background: var(--panel-2);
 }
 
 .btn--toggle {
-  padding: 0.4rem 0.7rem;
-  font-size: 0.9rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.86rem;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .cabecera__proveedor {
@@ -524,6 +534,9 @@ body {
 }
 
 .feedback-mensaje {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.85rem;
 }
 
@@ -702,7 +715,9 @@ body {
 }
 
 .dropzone__icono {
-  font-size: 2.5rem;
+  color: var(--texto-suave);
+  display: flex;
+  justify-content: center;
 }
 
 .dropzone__titulo {
@@ -745,6 +760,10 @@ body {
 
 /* Botones */
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
   border: 1px solid var(--borde);
   background: var(--panel-2);
   color: var(--texto);
@@ -752,10 +771,26 @@ body {
   padding: 0.6rem 1.1rem;
   font-size: 0.95rem;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .btn:hover {
   border-color: var(--acento);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.icono {
+  flex: none;
+}
+
+.bandera {
+  flex: none;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
 .btn--primario {
@@ -815,12 +850,20 @@ body {
 }
 
 .error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
   margin-top: 1rem;
   border: 1px solid var(--peligro);
   color: var(--peligro);
   border-radius: 8px;
   padding: 0.7rem 0.9rem;
   background: rgba(248, 113, 113, 0.08);
+}
+
+.error .icono {
+  flex: none;
+  margin-top: 0.15rem;
 }
 
 /* Panel derecho vacío */
@@ -874,6 +917,9 @@ body {
 }
 
 .chip-unidades {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.75rem;
   color: var(--acento);
   border: 1px solid var(--acento);
@@ -888,9 +934,16 @@ body {
 }
 
 .resumen {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   border-radius: 8px;
   padding: 0.7rem 0.9rem;
   font-size: 0.95rem;
+}
+
+.resumen .icono {
+  flex: none;
 }
 
 .resumen--ok {
@@ -914,6 +967,9 @@ body {
 }
 
 .grupo legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0 0.5rem;
   font-weight: 600;
   color: var(--acento);
@@ -972,6 +1028,11 @@ body {
 .campo select:focus {
   outline: none;
   border-color: var(--acento);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.campo input[type='number'] {
+  font-variant-numeric: tabular-nums;
 }
 
 .campo--aviso input,
@@ -980,10 +1041,18 @@ body {
 }
 
 .campo__mensaje {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
   margin: 0;
   font-size: 0.8rem;
   color: var(--aviso);
   line-height: 1.35;
+}
+
+.campo__mensaje .icono {
+  flex: none;
+  margin-top: 0.1rem;
 }
 
 /* Ayuda "?" */
@@ -1025,6 +1094,9 @@ body {
 
 /* Chips de confianza */
 .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.7rem;
   border-radius: 999px;
   padding: 0.1rem 0.55rem;
@@ -1084,6 +1156,9 @@ body {
 }
 
 .cola__titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   margin: 0;
   font-size: 0.95rem;
 }
@@ -1269,4 +1344,19 @@ body {
 
 .campos-extra__nuevo input {
   flex: 1;
+}
+
+/* Toggles del modal de ajustes: checkbox + icono + texto alineados */
+.modal__check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+  cursor: pointer;
+}
+
+.modal__check input[type='checkbox'] {
+  width: auto;
+  margin: 0;
+  accent-color: var(--acento);
 }

@@ -9,6 +9,7 @@ import { etiquetaLongitud, listaLongitudMostrada, mmAUnidadMostrada, unidadMostr
 import { validar } from '../validaciones';
 import { Campo } from './Campo';
 import { Desarrollo } from './Desarrollo';
+import { IconoAnadir, IconoAviso, IconoCheck, IconoCopiar, IconoDescargar, IconoIA, IconoOk, IconoUnidades } from './Iconos';
 import { Presupuesto } from './Presupuesto';
 
 export type EstadoFeedback = 'inactivo' | 'guardando' | 'guardado' | 'error';
@@ -186,8 +187,16 @@ export function Resultados({
 
       <div className="resultados__cabecera">
         <ResumenAvisos avisos={avisos} t={t} />
-        {revisado && <span className="chip-unidades chip-unidades--ia">{r.revisadoIA}</span>}
-        {datos.sistema_unidades && <span className="chip-unidades">{r.unidadesPlano(datos.sistema_unidades === 'imperial')}</span>}
+        {revisado && (
+          <span className="chip-unidades chip-unidades--ia">
+            <IconoIA tamano={13} /> {r.revisadoIA}
+          </span>
+        )}
+        {datos.sistema_unidades && (
+          <span className="chip-unidades">
+            <IconoUnidades tamano={13} /> {r.unidadesPlano(datos.sistema_unidades === 'imperial')}
+          </span>
+        )}
       </div>
 
       <fieldset className="grupo">
@@ -301,8 +310,16 @@ export function Resultados({
 
       <div className="acciones acciones--feedback">
         <div className="acciones__feedback-info">
-          {estadoFeedback === 'guardado' && <span className="feedback-mensaje feedback-mensaje--ok">✓ {mensajeFeedback}</span>}
-          {estadoFeedback === 'error' && <span className="feedback-mensaje feedback-mensaje--error">⚠ {mensajeFeedback}</span>}
+          {estadoFeedback === 'guardado' && (
+            <span className="feedback-mensaje feedback-mensaje--ok">
+              <IconoCheck tamano={14} /> {mensajeFeedback}
+            </span>
+          )}
+          {estadoFeedback === 'error' && (
+            <span className="feedback-mensaje feedback-mensaje--error">
+              <IconoAviso tamano={14} /> {mensajeFeedback}
+            </span>
+          )}
           {(estadoFeedback === 'inactivo' || estadoFeedback === 'guardando') && (
             <label className="feedback-imagen">
               <input type="checkbox" checked={incluirImagenFeedback} onChange={(e) => onCambiarIncluirImagen(e.target.checked)} />
@@ -311,6 +328,7 @@ export function Resultados({
           )}
         </div>
         <button className="btn btn--aprender" onClick={onGuardarFeedback} disabled={estadoFeedback === 'guardando' || estadoFeedback === 'guardado'} title={r.tituloGuardar}>
+          <IconoIA tamano={15} />
           {estadoFeedback === 'guardando' ? r.guardando : estadoFeedback === 'guardado' ? r.guardado : r.guardarCorreccion}
         </button>
       </div>
@@ -324,12 +342,15 @@ export function Resultados({
             setTimeout(() => setAnadido(false), 2000);
           }}
         >
+          {anadido ? <IconoCheck tamano={15} /> : <IconoAnadir tamano={15} />}
           {anadido ? r.anadido : r.anadirListado}
         </button>
         <button className="btn" onClick={copiar}>
+          <IconoCopiar tamano={15} />
           {r.copiarJson}
         </button>
         <button className="btn" onClick={exportar}>
+          <IconoDescargar tamano={15} />
           {r.descargarJson}
         </button>
       </div>
@@ -339,7 +360,15 @@ export function Resultados({
 
 function ResumenAvisos({ avisos, t }: { avisos: Aviso[]; t: Textos }) {
   if (avisos.length === 0) {
-    return <div className="resumen resumen--ok">{t.resultados.resumenOk}</div>;
+    return (
+      <div className="resumen resumen--ok">
+        <IconoOk tamano={15} /> {t.resultados.resumenOk}
+      </div>
+    );
   }
-  return <div className="resumen resumen--avisos">{t.resultados.resumenAvisos(avisos.length)}</div>;
+  return (
+    <div className="resumen resumen--avisos">
+      <IconoAviso tamano={15} /> {t.resultados.resumenAvisos(avisos.length)}
+    </div>
+  );
 }
