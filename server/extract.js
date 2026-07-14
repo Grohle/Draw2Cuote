@@ -40,6 +40,7 @@ Reglas estrictas para evitar lecturas erróneas:
 - COTA INTERIOR vs EXTERIOR: fíjate en si cada cota mide la cara por DENTRO o por FUERA del doblado. Si las líneas de cota van entre caras internas (no incluyen el espesor), marca cota_interior = true; si abarcan el exterior, false. Ejemplo: una U de espesor 2 mm con cota interior 46 mm mide 46+2+2 = 50 mm por fuera. Esto cambia el desarrollo, tómalo muy en serio. En caso de duda, false (exterior).
 - En "desarrollo.pliegues" añade un elemento por pliegue con su ángulo (usa 90 si el plano indica que los ángulos no acotados son 90°) y su radio interior (p. ej. "R1.5" o "2xR1.5"; radio null si no aparece). Solo deja lados vacío si de verdad no hay ninguna vista de perfil legible.
 - UNIDADES DEL PLANO: determina en "sistema_unidades" si el plano está acotado en milímetros ("metrico", cajetín "Unit: mm") o en pulgadas ("imperial", "Unit: in/inch", símbolo " o cotas fraccionarias). Aun así, todas las cotas que devuelvas van SIEMPRE en milímetros (convierte las pulgadas: 1" = 25.4 mm).
+- CAMPOS ADICIONALES: si el cajetín o las notas traen un dato claramente rotulado que NO encaja en ningún campo del esquema (peso, escala, tratamiento térmico, norma de soldadura...), devuélvelo en "campos_extra" con un nombre corto basado en el rótulo y el valor literal. Si se te da una lista de campos adicionales ya definidos, reutiliza EXACTAMENTE esos nombres cuando el dato coincida (no crees variantes). Nunca dupliques ahí un dato que ya va en otro campo.
 - Escribe las observaciones en español.`;
 
 const SYSTEM_EN = `You are a technical drafting engineer specialized in sheet metal fabrication and boilermaking.
@@ -65,6 +66,7 @@ Strict rules to avoid incorrect readings:
 - INSIDE vs OUTSIDE dimension: check whether each dimension measures the face on the INSIDE or the OUTSIDE of the bend. If the dimension lines run between inner faces (excluding the thickness), set cota_interior = true; if they span the outside, false. Example: a U-channel of 2 mm thickness with a 46 mm inside dimension measures 46+2+2 = 50 mm outside. This changes the flat pattern — take it very seriously. When in doubt, false (outside).
 - In "desarrollo.pliegues" add one item per bend with its angle (use 90 if the drawing states unmarked angles are 90°) and its inner radius (e.g. "R1.5" or "2xR1.5"; radius null if not shown). Only leave lados empty if there truly is no legible profile view.
 - DRAWING UNITS: determine in "sistema_unidades" whether the drawing is dimensioned in millimeters ("metrico", title block "Unit: mm") or inches ("imperial", "Unit: in/inch", the " symbol or fractional dimensions). Regardless, return ALL dimensions in millimeters (convert inches: 1" = 25.4 mm).
+- EXTRA FIELDS: if the title block or notes contain a clearly labeled piece of data that does NOT fit any schema field (weight, scale, heat treatment, welding standard...), return it in "campos_extra" with a short name based on the label and the literal value. If you are given a list of already-defined extra fields, reuse EXACTLY those names when the data matches (do not create variants). Never duplicate there data that already goes in another field.
 - Write all observations in English.`;
 
 export function sistemaBase(idioma) {
@@ -158,16 +160,33 @@ function bloqueAlias(alias, idioma) {
 }
 
 /**
+ * Bloque con los campos adicionales que el usuario ya tiene definidos (creados
+ * a mano o por la propia app en análisis anteriores). Se inyecta para que el
+ * modelo reutilice EXACTAMENTE esos nombres en "campos_extra" en vez de crear
+ * variantes ("tratamiento térmico" vs "trat. térmico"), que luego el creador
+ * de campos del cliente tendría que deduplicar.
+ */
+function bloqueCamposExtra(camposExtra, idioma) {
+  if (!Array.isArray(camposExtra)) return '';
+  const nombres = camposExtra.map((n) => String(n).trim()).filter(Boolean).slice(0, 50);
+  if (!nombres.length) return '';
+  return idioma === 'en'
+    ? `\n\nThe user already has these EXTRA FIELDS defined. When the drawing contains one of these data points, return it in "campos_extra" using EXACTLY this name:\n${nombres.map((n) => `- ${n}`).join('\n')}`
+    : `\n\nEl usuario ya tiene definidos estos CAMPOS ADICIONALES. Cuando el plano contenga uno de estos datos, devuélvelo en "campos_extra" usando EXACTAMENTE este nombre:\n${nombres.map((n) => `- ${n}`).join('\n')}`;
+}
+
+/**
  * Prompt de sistema efectivo para esta petición: el prompt base; si hay
  * feedback humano acumulado suficiente, las lecciones destiladas (agregadas) y
  * los ejemplos few-shot (correcciones concretas) de análisis previos —
- * aprendizaje en contexto sin reentrenar—; y los alias de campo del usuario.
+ * aprendizaje en contexto sin reentrenar—; los alias de campo del usuario; y
+ * sus campos adicionales ya definidos.
  */
-function construirSystemEfectivo(idioma, alias) {
+function construirSystemEfectivo(idioma, alias, camposExtra) {
   const base = sistemaBase(idioma);
   const lecciones = construirLeccionesAprendidas(idioma);
   const ejemplos = construirEjemplosCorreccion(idioma);
-  return `${base}${lecciones ? `\n\n${lecciones}` : ''}${ejemplos ? `\n\n${ejemplos}` : ''}${bloqueAlias(alias, idioma)}`;
+  return `${base}${lecciones ? `\n\n${lecciones}` : ''}${ejemplos ? `\n\n${ejemplos}` : ''}${bloqueAlias(alias, idioma)}${bloqueCamposExtra(camposExtra, idioma)}`;
 }
 
 /** Prueba de conexión según el proveedor configurado. */
@@ -189,10 +208,10 @@ export async function probarProveedor(config) {
   await probarProveedorRemoto(config);
 }
 
-async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idioma, alias, previa, ocrTexto }) {
+async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idioma, alias, camposExtra, previa, ocrTexto }) {
   const m = mensajes(idioma);
   const client = crearCliente(apiKey);
-  const system = previa ? sistemaRevision(idioma) : construirSystemEfectivo(idioma, alias);
+  const system = previa ? sistemaRevision(idioma) : construirSystemEfectivo(idioma, alias, camposExtra);
   const texto = (previa ? instruccionRevision(idioma, previa) : INSTRUCCION[idioma === 'en' ? 'en' : 'es']) + bloqueOcr(ocrTexto, idioma);
   const response = await client.messages.parse({
     model: MODELOS_ANTHROPIC.includes(model) ? model : MODELO_DEFECTO,
@@ -225,7 +244,7 @@ async function extraerConAnthropic({ mediaType, dataBase64, apiKey, model, idiom
  * Proveedores sin structured outputs nativos: se incrusta el esquema JSON en
  * el prompt, se pide modo JSON y se valida la respuesta con Zod en el servidor.
  */
-async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model, idioma, alias, previa, ocrTexto }) {
+async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, baseUrl, model, idioma, alias, camposExtra, previa, ocrTexto }) {
   const m = mensajes(idioma);
   if (!model || !model.trim()) {
     const err = new Error(m.indicaModelo);
@@ -254,7 +273,7 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
     baseUrl: resolverBaseUrl(proveedor, baseUrl, idioma),
     apiKey,
     model: model.trim(),
-    system: previa ? sistemaRevision(idioma) : construirSystemEfectivo(idioma, alias),
+    system: previa ? sistemaRevision(idioma) : construirSystemEfectivo(idioma, alias, camposExtra),
     instruccion,
     mediaType,
     dataBase64,
@@ -275,8 +294,8 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
   return validado.data;
 }
 
-export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
-  const { proveedor = 'anthropic', apiKey, baseUrl, modelo, idioma, alias, revisar, ocr } = config ?? {};
+export async function extraerDatosPlano({ mediaType, dataBase64, config, ocrPrevio }) {
+  const { proveedor = 'anthropic', apiKey, baseUrl, modelo, idioma, alias, camposExtra, revisar, ocr } = config ?? {};
   if (!esProveedorValido(proveedor)) {
     const err = new Error(mensajes(idioma).proveedorDesconocido(proveedor));
     err.status = 400;
@@ -288,9 +307,11 @@ export async function extraerDatosPlano({ mediaType, dataBase64, config }) {
   }
 
   // Guardarraíl opcional: OCR de la imagen como texto de referencia (solo pasada 1).
-  const ocrTexto = ocr ? await ocrImagen({ mediaType, dataBase64 }) : null;
+  // Si el cliente ya lo pre-calculó para esta pieza (cola de planos), se usa tal
+  // cual (ocrPrevio: string, o null si su OCR no dio nada) y no se repite aquí.
+  const ocrTexto = ocrPrevio !== undefined ? ocrPrevio : ocr ? await ocrImagen({ mediaType, dataBase64 }) : null;
 
-  const comun = { mediaType, dataBase64, apiKey, idioma, alias, model: modelo };
+  const comun = { mediaType, dataBase64, apiKey, idioma, alias, camposExtra, model: modelo };
   const extraer = (extra) =>
     proveedor === 'anthropic'
       ? extraerConAnthropic({ ...comun, ...extra })
@@ -347,6 +368,10 @@ const DATOS_DEMO_ES = {
       { angulo_grados: 90, radio_mm: 3 },
     ],
   },
+  campos_extra: [
+    { nombre: 'peso', valor: '2.4 kg', confianza: 'media' },
+    { nombre: 'escala', valor: '1:5', confianza: 'alta' },
+  ],
   observaciones: [
     'MODO DEMO: estos datos son de ejemplo; configura un proveedor en ⚙ Ajustes para analizar planos reales.',
     'El acabado aparece en una nota manuscrita poco legible; confirmar con el cliente.',
@@ -387,6 +412,10 @@ const DATOS_DEMO_EN = {
       { angulo_grados: 90, radio_mm: 3 },
     ],
   },
+  campos_extra: [
+    { nombre: 'weight', valor: '2.4 kg', confianza: 'media' },
+    { nombre: 'scale', valor: '1:5', confianza: 'alta' },
+  ],
   observaciones: [
     'DEMO MODE: this is sample data; configure a provider in ⚙ Settings to analyze real drawings.',
     'The finish appears in a hard-to-read handwritten note; confirm with the customer.',

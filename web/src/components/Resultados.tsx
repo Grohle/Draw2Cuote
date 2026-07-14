@@ -34,7 +34,7 @@ interface Props {
   onAnadirListado: (datos: Extraccion) => void;
 }
 
-type ClaveCampo = Exclude<keyof Extraccion, 'observaciones' | 'desarrollo' | 'sistema_unidades'>;
+type ClaveCampo = Exclude<keyof Extraccion, 'observaciones' | 'desarrollo' | 'sistema_unidades' | 'campos_extra'>;
 const DECIMALES_MOSTRADOS: Record<SistemaUnidades, number> = { metrico: 3, imperial: 4 };
 /** Campo por defecto si faltara en los datos: evita que un esquema inesperado deje la app en blanco. */
 const CAMPO_VACIO = { valor: null, confianza: 'media' as const };
@@ -77,6 +77,12 @@ export function Resultados({
 
   const setLongitudMm = (clave: ClaveCampo, mm: number | null) =>
     onCambio({ ...datos, [clave]: { valor: mm, confianza: datos[clave].confianza, editado: true } });
+
+  const setCampoExtra = (indice: number, valor: string) =>
+    onCambio({
+      ...datos,
+      campos_extra: datos.campos_extra.map((c, i) => (i === indice ? { ...c, valor: valor === '' ? null : valor, editado: true } : c)),
+    });
 
   const campoTexto = (clave: ClaveCampo, etiqueta: string, lista?: string[]) => {
     const campo = datos[clave] ?? CAMPO_VACIO;
@@ -262,6 +268,19 @@ export function Resultados({
           {campoTexto('roscas', et('roscas', t.campos.roscas))}
         </div>
       </fieldset>
+
+      {datos.campos_extra.length > 0 && (
+        <fieldset className="grupo">
+          <legend>{r.grupoExtra}</legend>
+          <div className="grupo__campos">
+            {datos.campos_extra.map((c, i) => (
+              <Campo key={`${c.nombre}-${i}`} etiqueta={c.nombre} ayuda={r.ayudaCampoExtra} confianza={c.confianza} editado={c.editado} avisos={[]} t={t}>
+                <input type="text" value={c.valor ?? ''} placeholder="—" onChange={(e) => setCampoExtra(i, e.target.value)} />
+              </Campo>
+            ))}
+          </div>
+        </fieldset>
+      )}
 
       {tipo === 'chapa_plegada' && (datos.num_pliegues.valor ?? 0) >= 1 && (
         <Desarrollo datos={datos} onCambio={onCambio} unidades={unidades} opciones={opcionesDesplegado} onCambioOpciones={onCambioDesplegado} t={t} />

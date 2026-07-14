@@ -65,6 +65,25 @@ La UI informa por etapas durante el análisis (una sola petición al servidor; e
 3. **Auditoría lógica** (55–85%) — segunda pasada de razonamiento (si está activada).
 4. **Síntesis y reporte** (85–100%) — validaciones deterministas, desarrollo, presupuesto.
 
+## 5. Cola de planos con pre-procesado adelantado
+
+Se pueden soltar **varios planos a la vez**: cada uno entra en una cola visible bajo el botón de analizar (desplazable con la rueda, filtrable por tipo de fabricación, con una barra de estado encima de cada nombre). El procesado corre por **dos carriles**:
+
+- **Carril principal (IA)**: las piezas se analizan de una en una, en orden (`/api/extract`), respetando los límites del proveedor.
+- **Carril adelantado (herramientas)**: mientras la IA analiza una pieza, el cliente va ejecutando las herramientas previas sobre las siguientes de la cola — hoy, el **OCR** (`/api/ocr`) — y guarda el resultado. Cuando le llega el turno a esa pieza, su análisis viaja con el OCR ya hecho (`ocrTexto` en el body), así la IA arranca con el trabajo de referencia adelantado y no lo repite.
+
+El diseño es extensible: cualquier pre-procesado futuro (detección de layout, recorte de regiones) se engancharía en el mismo carril adelantado (`prepararPieza()` en `web/src/App.tsx`).
+
+## 6. Creador de campos (skill con guardarraíles)
+
+Cuando un plano trae un dato claramente rotulado que no encaja en ningún campo del esquema (peso, escala, tratamiento térmico...), el modelo lo devuelve en `campos_extra` y el **creador de campos** decide si registra un campo adicional nuevo. Es una skill pequeña y acotada (`web/src/creadorCampos.ts`) compartida por los dos caminos — automático tras cada análisis y manual desde 🏷 Campos — con los mismos guardarraíles:
+
+1. **Normalización**: minúsculas, sin acentos, espacios colapsados ("Tratamiento Térmico" → id `tratamiento_termico`).
+2. **Anti-duplicados**: se rechaza si coincide (normalizado) con un campo del esquema, su etiqueta ES/EN, una etiqueta personalizada, un alias configurado o un campo adicional ya existente.
+3. **Límites**: nombre de 2–40 caracteres alfanuméricos y máximo 30 campos adicionales.
+
+Los campos creados se persisten en la configuración auto-guardada y sus nombres se inyectan en el prompt de los siguientes análisis, para que el modelo reutilice exactamente esos nombres (dentro de una misma cola, la pieza 2 ya conoce los campos creados por la pieza 1).
+
 ## Resumen del reparto de responsabilidades
 
 | Capa | Quién | Dónde |
@@ -72,5 +91,7 @@ La UI informa por etapas durante el análisis (una sola petición al servidor; e
 | Extracción | VLM (multi-proveedor) con esquema estricto | `server/extract.js`, `server/esquema.js` |
 | Revisión/auditoría | 2º agente LLM + aserciones matemáticas | `server/extract.js` (revisión) |
 | Reglas de negocio | Código determinista, sin IA | `web/src/validaciones.ts`, `desplegado.ts`, `presupuesto.ts` |
+| Creador de campos | Skill determinista con guardarraíles | `web/src/creadorCampos.ts` |
+| Cola y pre-procesado | Orquestación en el cliente + `/api/ocr` | `web/src/App.tsx`, `web/src/cola.ts`, `server/index.js` |
 | Aprendizaje con el uso | Feedback humano → lecciones en contexto | `server/feedback.js` |
 | Configuración | JSON auto-guardado + localStorage | `server/config.js`, `web/src/configArchivo.ts` |

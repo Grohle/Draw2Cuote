@@ -60,7 +60,17 @@ export interface Extraccion {
   /** Sistema de unidades en que está acotado el plano (las cotas se guardan siempre en mm). */
   sistema_unidades: 'metrico' | 'imperial' | null;
   desarrollo: DesarrolloGeom;
+  /** Datos rotulados del plano que no encajan en ningún campo fijo (peso, escala...). */
+  campos_extra: CampoExtraDato[];
   observaciones: string[];
+}
+
+/** Un dato adicional extraído del plano: rótulo + valor literal. */
+export interface CampoExtraDato {
+  nombre: string;
+  valor: string | null;
+  confianza: Confianza;
+  editado?: boolean;
 }
 
 export interface LadoGeom {

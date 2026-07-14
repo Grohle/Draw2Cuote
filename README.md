@@ -40,6 +40,14 @@ Los datos que extrae la app son fijos (espesor, material, cantidad…), pero el 
 - **Renombrar** cómo se muestra en la interfaz (p. ej. "Marca" → "Posición").
 - Añadir los **alias** (rótulos reales de tus planos, separados por comas). Esos alias se envían al lector dentro del prompt de sistema para que sepa dónde mirar, **sin cambiar el esquema de datos**: los campos canónicos siguen siendo los mismos, solo se le enseña al modelo qué etiquetas equivalen a cada uno.
 
+### Creador de campos automático (con guardarraíles)
+
+Si un plano trae un dato claramente rotulado que **no encaja en ningún campo fijo** (peso, escala, tratamiento térmico, norma de soldadura...), el lector lo devuelve como campo adicional y el **creador de campos** lo registra automáticamente. Es una skill pequeña y acotada (`web/src/creadorCampos.ts`) que usan por igual la IA (tras cada análisis) y el humano (a mano en **🏷 Campos**), siempre con los mismos guardarraíles: **normalización** del nombre (minúsculas, sin acentos), **comprobación de duplicidad** contra los campos fijos, sus etiquetas en ambos idiomas, tus alias y los campos ya creados, y **límites** de longitud y cantidad. Los campos creados aparecen en los resultados ("Campos adicionales del plano"), se gestionan/eliminan en 🏷 Campos, se guardan en la configuración automática, y sus nombres se envían al lector para que los siguientes análisis usen exactamente los mismos.
+
+### Cola de planos (análisis por lotes con pre-procesado)
+
+Puedes **soltar varios planos a la vez** (o ir añadiendo más mientras se analiza): cada uno entra en una cola visible bajo el botón de analizar, con una **barra de estado encima de cada nombre** (vacía en cola, animada mientras trabaja, verde al acabar), desplazable con la rueda del ratón y **filtrable por tipo de fabricación** o por "sin analizar". Al hacer clic en una pieza se ve su análisis en el panel derecho. Mientras la IA analiza una pieza, las herramientas previas (hoy, el **OCR** si está activado) van ejecutándose sobre las siguientes de la cola, de modo que cada análisis llegue con ese trabajo ya adelantado.
+
 ### Desarrollo (desplegado) de chapa
 
 Cuando la pieza es **chapa plegada con al menos un pliegue**, el lector extrae del plano la **geometría de plegado** —las longitudes de los **lados** (tramos rectos), y por cada pliegue su **ángulo** y **radio interior**— y el panel **📐 Desarrollo de chapa** calcula el despliegue **a × b**:
@@ -177,6 +185,8 @@ web/             Frontend React + Vite + TypeScript
 
 Respuesta: `{ "demo": false, "datos": { "espesor_mm": { "valor": 3, "confianza": "alta" }, ... , "observaciones": [] } }`
 
-El `config` de la petición admite `alias` — un mapa `{ campo: ["rótulo1", "rótulo2"] }` con los nombres que los planos del usuario dan a cada campo, que el servidor inyecta en el prompt del lector.
+El `config` de la petición admite `alias` — un mapa `{ campo: ["rótulo1", "rótulo2"] }` con los nombres que los planos del usuario dan a cada campo — y `camposExtra` — la lista de nombres de campos adicionales ya definidos —, que el servidor inyecta en el prompt del lector. El body admite además `ocrTexto` (string o null): el OCR ya pre-calculado por la cola, para no repetirlo en el servidor.
+
+`POST /api/ocr` — pre-procesado de la cola: `{ "mediaType": "image/png", "dataBase64": "..." }` → `{ "texto": "25.4@(0.20,0.15) ..." | null }`. Devuelve null si el OCR no aplica (PDF) o no está disponible; nunca falla el análisis por esto.
 
 `GET /api/config` · `PUT /api/config` — leen y guardan la configuración del usuario en `server/datos/config.json` (guardado automático desde la UI; la clave de API queda excluida).
