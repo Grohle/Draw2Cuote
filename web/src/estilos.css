@@ -1360,3 +1360,56 @@ body {
   margin: 0;
   accent-color: var(--acento);
 }
+
+/* Selector de idioma con desplegable al pasar el ratón (o con foco de teclado) */
+.menu-idioma {
+  position: relative;
+}
+
+.menu-idioma__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  min-width: 9.5rem;
+  padding: 0.3rem;
+  gap: 0.15rem;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+
+.menu-idioma:hover .menu-idioma__panel,
+.menu-idioma:focus-within .menu-idioma__panel {
+  display: flex;
+}
+
+.menu-idioma__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--texto);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-idioma__item:hover {
+  background: var(--panel);
+}
+
+.menu-idioma__item--activo {
+  color: var(--acento);
+}
+
+/* Fila de acciones alineada a la izquierda (p. ej. exportar JSON en Precisión) */
+.modal__acciones--izquierda {
+  justify-content: flex-start;
+}

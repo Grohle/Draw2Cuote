@@ -180,6 +180,8 @@ const TEXTOS_ES = {
     guardarCorreccion: 'Guardar corrección',
     copiarJson: 'Copiar JSON',
     descargarJson: 'Descargar JSON',
+    exportarXlsx: 'Exportar XLSX',
+    exportarCsv: 'Exportar CSV',
     anadirListado: 'Añadir al listado',
     anadido: 'Añadida al listado',
   },
@@ -235,6 +237,8 @@ const TEXTOS_ES = {
     columnaBaja: 'Baja→corr.',
     notaFinal:
       '"Alta→corr." indica cuántas veces un valor marcado con confianza alta por el modelo tuvo que corregirse luego: idealmente cercano a 0. Con pocos análisis los porcentajes no son representativos todavía.',
+    jsonTitulo: 'Datos de la pieza actual (JSON)',
+    jsonNota: 'Copia o descarga la extracción de la pieza que tienes a la vista en formato JSON, para integrarla en otros sistemas.',
     cerrar: 'Cerrar',
   },
   tarifas: {
@@ -330,10 +334,10 @@ const TEXTOS_ES = {
     quitar: 'Quitar',
     vaciar: 'Vaciar',
     exportarCsv: 'CSV',
-    exportarExcel: 'Excel',
+    exportarExcel: 'Excel (.xlsx)',
     cerrar: 'Cerrar',
     sinCalcular: 'sin calcular',
-    nota: 'La exportación incluye solo las columnas con algún valor. El precio usa las tarifas actuales.',
+    nota: 'Exporta a CSV o a Excel (.xlsx). Incluye solo las columnas con algún valor. El precio usa las tarifas actuales.',
   },
   personalizar: {
     titulo: 'Campos y alias',
@@ -607,6 +611,8 @@ const TEXTOS_EN: Textos = {
     guardarCorreccion: 'Save correction',
     copiarJson: 'Copy JSON',
     descargarJson: 'Download JSON',
+    exportarXlsx: 'Export XLSX',
+    exportarCsv: 'Export CSV',
     anadirListado: 'Add to list',
     anadido: 'Added to list',
   },
@@ -662,6 +668,8 @@ const TEXTOS_EN: Textos = {
     columnaBaja: 'Low→corr.',
     notaFinal:
       '"High→corr." shows how many times a value the model marked high-confidence had to be corrected afterward: ideally close to 0. With few analyses the percentages aren\'t representative yet.',
+    jsonTitulo: 'Current part data (JSON)',
+    jsonNota: 'Copy or download the extraction of the part you are viewing as JSON, to integrate it into other systems.',
     cerrar: 'Close',
   },
   tarifas: {
@@ -752,10 +760,10 @@ const TEXTOS_EN: Textos = {
     quitar: 'Remove',
     vaciar: 'Clear',
     exportarCsv: 'CSV',
-    exportarExcel: 'Excel',
+    exportarExcel: 'Excel (.xlsx)',
     cerrar: 'Close',
     sinCalcular: 'not computed',
-    nota: 'The export includes only columns that have a value. Prices use the current rates.',
+    nota: 'Export to CSV or Excel (.xlsx). Includes only columns that have a value. Prices use the current rates.',
   },
   personalizar: {
     titulo: 'Fields & aliases',

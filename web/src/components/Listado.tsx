@@ -1,4 +1,5 @@
-import { construirTabla, tablaACsv, tablaAExcelHtml, type ItemListado } from '../listado';
+import { construirTabla, type ItemListado } from '../listado';
+import { descargarCsv, descargarXlsx } from '../descargas';
 import type { Textos } from '../i18n';
 import type { Tarifas } from '../tarifas';
 import type { SistemaUnidades } from '../unidades';
@@ -16,23 +17,13 @@ interface Props {
 
 const euros = (n: number) => n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 
-function descargar(nombre: string, contenido: string, tipo: string) {
-  const blob = new Blob(['﻿', contenido], { type: tipo });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = nombre;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/** Modal del listado de piezas: tabla, precio total y exportación CSV / Excel. */
+/** Modal del listado de piezas: tabla, precio total y exportación CSV / XLSX. */
 export function Listado({ items, tarifas, unidades, t, onQuitar, onVaciar, onCerrar }: Props) {
   const l = t.listado;
   const tabla = construirTabla(items, tarifas, t, unidades);
 
-  const exportarCsv = () => descargar('draw2quote-listado.csv', tablaACsv(tabla), 'text/csv;charset=utf-8');
-  const exportarExcel = () => descargar('draw2quote-listado.xls', tablaAExcelHtml(tabla, l.titulo), 'application/vnd.ms-excel');
+  const exportarCsv = () => descargarCsv('draw2quote-listado.csv', tabla);
+  const exportarExcel = () => descargarXlsx('draw2quote-listado.xlsx', tabla, l.titulo);
 
   return (
     <div className="modal-fondo" onClick={onCerrar}>
