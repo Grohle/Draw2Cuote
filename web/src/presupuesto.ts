@@ -54,12 +54,34 @@ const NO_CALCULABLE = (camposFaltantes: string[]): ResultadoPresupuesto => ({
   avisos: [],
 });
 
-/** Cuenta roscas de un texto tipo "M4 (x1), M6 (x4)"; si no hay cantidades explícitas pero hay texto, cuenta 1. */
+/** Textos que el modelo/usuario a veces pone para decir "ninguna rosca" en vez de dejar el campo vacío. */
+const SIN_ROSCAS = new Set(['0', 'no', 'none', 'ninguna', 'ninguno', 'sin', 'sin roscas', 'no threads', 'n/a', 'na', '-', '—']);
+
+/**
+ * Una designación de rosca (M6, G1/2, 1/4 UNC, BSP, NPT...) con su cantidad
+ * opcional, que puede ir antes ("2xM8") o después ("M8 x2", "M6 (x4)").
+ */
+const DESIGNACION_ROSCA = /(?:(\d+)\s*[x×]\s*)?(m\d+(?:\.\d+)?|\d+\/\d+\s*(?:unc|unf|bsp|npt)|g\s?\d+(?:\/\d+)?|unc|unf|bsp|bsw|npt|w\d+)(?:\s*\(?\s*[x×]\s*(\d+)\s*\)?)?/gi;
+
+/**
+ * Cuenta roscas de un texto tipo "M4 (x1), M6 (x4)" o "2xM8". Devuelve 0 cuando
+ * no hay roscas: campo vacío, un texto de "ninguna" (0, none, sin roscas...), o
+ * texto sin ninguna designación de rosca reconocible. Cada designación cuenta
+ * su cantidad (antes o después de la "x") o 1 si no la lleva. Así una pieza sin
+ * roscas nunca suma coste (antes cualquier texto no vacío contaba como 1).
+ */
 function contarRoscas(texto: string | null): number {
-  if (!texto || !texto.trim()) return 0;
-  const coincidencias = [...texto.matchAll(/x\s*(\d+)/gi)];
-  if (coincidencias.length === 0) return 1;
-  return coincidencias.reduce((suma, m) => suma + parseInt(m[1], 10), 0);
+  if (!texto) return 0;
+  const limpio = texto.trim().toLowerCase();
+  if (!limpio || SIN_ROSCAS.has(limpio)) return 0;
+
+  let total = 0;
+  for (const m of texto.matchAll(DESIGNACION_ROSCA)) {
+    const antes = m[1] ? parseInt(m[1], 10) : 0;
+    const despues = m[3] ? parseInt(m[3], 10) : 0;
+    total += antes || despues || 1;
+  }
+  return total;
 }
 
 function formatearPrecioKg(precioKg: number, unidades: SistemaUnidades): string {
