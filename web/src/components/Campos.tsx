@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { aliasComoTexto, CLAVES_CAMPO, textoAAlias, type CamposPersonalizados, type ClaveCampo } from '../camposPersonalizados';
 import { crearCampoManual, MAX_CAMPOS_EXTRA, type Rechazo } from '../creadorCampos';
 import type { Textos } from '../i18n';
+import { IconoAviso, IconoQuitar } from './Iconos';
 
 interface Props {
   camposPersonalizados: CamposPersonalizados;
@@ -89,7 +90,7 @@ export function Campos({ camposPersonalizados, onCambio, onCerrar, t }: Props) {
               <li key={c.id} className="campos-extra__item">
                 <span>{c.nombre}</span>
                 <button className="cola__quitar" type="button" title={p.extraQuitar} aria-label={`${p.extraQuitar}: ${c.nombre}`} onClick={() => quitarExtra(c.id)}>
-                  ✕
+                  <IconoQuitar tamano={13} />
                 </button>
               </li>
             ))}
@@ -113,7 +114,11 @@ export function Campos({ camposPersonalizados, onCambio, onCerrar, t }: Props) {
             {p.extraAnadir}
           </button>
         </div>
-        {avisoExtra && <p className="campo__mensaje">⚠ {avisoExtra}</p>}
+        {avisoExtra && (
+          <p className="campo__mensaje">
+            <IconoAviso tamano={13} /> {avisoExtra}
+          </p>
+        )}
 
         <div className="modal__acciones">
           <button className="btn" type="button" onClick={() => onCambio({ extra: camposPersonalizados.extra })}>

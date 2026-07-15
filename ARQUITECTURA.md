@@ -13,7 +13,7 @@ npm run build
 npm start          # sirve la app en :3001
 ```
 
-Y en **⚙ Ajustes** de la propia app se introduce la clave del proveedor de IA elegido (Anthropic, Google Gemini con capa gratuita, Ollama/LM Studio/vLLM locales, o cualquier API compatible OpenAI). Alternativamente, `export ANTHROPIC_API_KEY=...` en el servidor. Sin clave, la app arranca en modo demo.
+Y en **Ajustes** de la propia app se introduce la clave del proveedor de IA elegido (Anthropic, Google Gemini con capa gratuita, Ollama/LM Studio/vLLM locales, o cualquier API compatible OpenAI). Alternativamente, `export ANTHROPIC_API_KEY=...` en el servidor. Sin clave, la app arranca en modo demo.
 
 ## 1. Aprendizaje en contexto dirigido por correcciones (MICL)
 
@@ -27,7 +27,7 @@ Mejora del rendimiento **sin fine-tuning**: el sistema aprende de los errores qu
 | Destilado del histórico en "lecciones aprendidas" (campos que más se corrigen, transiciones `null → valor`, valores frecuentes por familia) | `construirLeccionesAprendidas()` en `server/feedback.js` |
 | **Inyección dinámica de ejemplos few-shot**: correcciones concretas pasadas (`campo: antes → después`) presentadas como ejemplos en el prompt, con la instrucción de usarlas como recordatorio del error, no de copiar valores | `construirEjemplosCorreccion()` en `server/feedback.js` |
 | Inyección de ambos bloques en el prompt de sistema de cada análisis nuevo, para cualquier proveedor | `construirSystemEfectivo()` en `server/extract.js` |
-| Calibración medible: % de correcciones por campo y por nivel de confianza | panel **📊 Precisión**, `GET /api/estadisticas` |
+| Calibración medible: % de correcciones por campo y por nivel de confianza | panel **Precisión**, `GET /api/estadisticas` |
 | Export a dataset de fine-tuning real (opcional, con imagen si el usuario lo permite) | `npm run feedback:exportar` |
 
 La recuperación de ejemplos aproxima la relevancia por **recencia y diversidad de campo** (los más nuevos sin repetir el mismo `antes→después`), no por similitud visual.
@@ -40,7 +40,7 @@ La recuperación de ejemplos aproxima la relevancia por **recencia y diversidad 
 
 - **Esquema estructurado obligatorio**: structured outputs nativos con Anthropic; con el resto de proveedores el JSON Schema va incrustado en el prompt y la respuesta se **valida con Zod en el servidor** — un modelo flojo no puede devolver datos con forma corrupta (`server/proveedores.js`, `server/extract.js`).
 - **Normalización defensiva en el cliente**: cualquier respuesta se completa a la forma esperada antes de renderizar (`web/src/normalizar.ts`).
-- **Alias de campos configurables**: el usuario enseña al modelo qué rótulos usan sus planos (`title`, `dwg`, `nº`, `mark`...), reduciendo la búsqueda a comprobación (`🏷 Campos`, `bloqueAlias()`).
+- **Alias de campos configurables**: el usuario enseña al modelo qué rótulos usan sus planos (`title`, `dwg`, `nº`, `mark`...), reduciendo la búsqueda a comprobación (`Campos`, `bloqueAlias()`).
 - **Prompts por dominio**: instrucciones específicas para cajetín, perfil de plegado, cota interior/exterior y unidades del plano, con la regla dura de **nunca inventar** (null + observación).
 - **OCR como referencia cruzada** (activable en Ajustes, OFF por defecto): antes del scan se pasa la imagen por Tesseract (`tesseract.js`, WASM puro, **sin binarios de sistema**) y el texto reconocido se inyecta en el prompt como referencia cruda —lista de tokens `texto@(x,y)` con posición normalizada— para que el modelo pueda **cotejar cifras y textos pequeños** que un VLM flojo suele leer mal, sin tratarlo como verdad absoluta. Es una **dependencia opcional** (`optionalDependencies`, import dinámico): si no está instalada, o falla, o no hay red para bajar los datos de idioma, el análisis continúa sin OCR — no rompe la instalación base ni el requisito de "solo tu clave de API". Robusto por diseño: `errorHandler` para que un fallo del worker no tumbe el servidor y un **tope de tiempo** (`DRAW2QUOTE_OCR_TIMEOUT_MS`, 45 s por defecto) porque el arranque de `tesseract.js` puede colgarse si no logra descargar los datos. Solo aplica a imágenes rasterizadas (no PDF) y solo en la 1.ª pasada. Código: `server/ocr.js`, `bloqueOcr()` en `server/extract.js`. Los datos de idioma se descargan de su CDN la primera vez; en entornos sin salida a Internet se apunta a una carpeta local con `DRAW2QUOTE_TESSDATA`.
 
@@ -76,7 +76,7 @@ El diseño es extensible: cualquier pre-procesado futuro (detección de layout, 
 
 ## 6. Creador de campos (skill con guardarraíles)
 
-Cuando un plano trae un dato claramente rotulado que no encaja en ningún campo del esquema (peso, escala, tratamiento térmico...), el modelo lo devuelve en `campos_extra` y el **creador de campos** decide si registra un campo adicional nuevo. Es una skill pequeña y acotada (`web/src/creadorCampos.ts`) compartida por los dos caminos — automático tras cada análisis y manual desde 🏷 Campos — con los mismos guardarraíles:
+Cuando un plano trae un dato claramente rotulado que no encaja en ningún campo del esquema (peso, escala, tratamiento térmico...), el modelo lo devuelve en `campos_extra` y el **creador de campos** decide si registra un campo adicional nuevo. Es una skill pequeña y acotada (`web/src/creadorCampos.ts`) compartida por los dos caminos — automático tras cada análisis y manual desde Campos — con los mismos guardarraíles:
 
 1. **Normalización**: minúsculas, sin acentos, espacios colapsados ("Tratamiento Térmico" → id `tratamiento_termico`).
 2. **Anti-duplicados**: se rechaza si coincide (normalizado) con un campo del esquema, su etiqueta ES/EN, una etiqueta personalizada, un alias configurado o un campo adicional ya existente.

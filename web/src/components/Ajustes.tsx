@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { cargarAjustes, configApi, guardarAjustes, type AjustesApp } from '../ajustes';
 import type { Idioma, Textos } from '../i18n';
 import { presetDe, presetTextos, PROVEEDORES, type IdProveedor } from '../proveedores';
+import { IconoIA, IconoOcr } from './Iconos';
 
 interface Props {
   serverKey: boolean;
@@ -139,13 +140,13 @@ export function Ajustes({ serverKey, onCerrar, t, idioma }: Props) {
 
         <label className="modal__check">
           <input type="checkbox" checked={ajustes.revisar} onChange={(e) => cambiar({ revisar: e.target.checked })} />
-          {a.revisar}
+          <IconoIA tamano={14} /> {a.revisar}
         </label>
         <p className="modal__nota">{a.revisarNota}</p>
 
         <label className="modal__check">
           <input type="checkbox" checked={ajustes.ocr} onChange={(e) => cambiar({ ocr: e.target.checked })} />
-          {a.ocr}
+          <IconoOcr tamano={14} /> {a.ocr}
         </label>
         <p className="modal__nota">{a.ocrNota}</p>
 

@@ -2,6 +2,7 @@ import { construirTabla, tablaACsv, tablaAExcelHtml, type ItemListado } from '..
 import type { Textos } from '../i18n';
 import type { Tarifas } from '../tarifas';
 import type { SistemaUnidades } from '../unidades';
+import { IconoDescargar, IconoQuitar } from './Iconos';
 
 interface Props {
   items: ItemListado[];
@@ -61,7 +62,7 @@ export function Listado({ items, tarifas, unidades, t, onQuitar, onVaciar, onCer
                       ))}
                       <td>
                         <button className="listado__quitar" type="button" title={l.quitar} onClick={() => onQuitar(items[i].id)}>
-                          ✕
+                          <IconoQuitar tamano={13} />
                         </button>
                       </td>
                     </tr>
@@ -85,9 +86,11 @@ export function Listado({ items, tarifas, unidades, t, onQuitar, onVaciar, onCer
                 {l.vaciar}
               </button>
               <button className="btn" type="button" onClick={exportarCsv}>
+                <IconoDescargar tamano={15} />
                 {l.exportarCsv}
               </button>
               <button className="btn btn--primario" type="button" onClick={exportarExcel}>
+                <IconoDescargar tamano={15} />
                 {l.exportarExcel}
               </button>
             </>

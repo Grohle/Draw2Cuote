@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { Textos } from '../i18n';
+import { IconoPlano } from './Iconos';
 
 const TIPOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const MAX_BYTES = 32 * 1024 * 1024;
@@ -92,7 +93,7 @@ export function Dropzone({ archivo, onArchivo, onError, t }: Props) {
       ) : (
         <div className="dropzone__vacio">
           <div className="dropzone__icono" aria-hidden>
-            📐
+            <IconoPlano tamano={46} />
           </div>
           <p className="dropzone__titulo">{t.dropzone.titulo}</p>
           <p className="dropzone__sub">{t.dropzone.sub}</p>

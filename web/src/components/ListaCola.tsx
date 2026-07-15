@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { pasaFiltro, tiposPresentes, type FiltroCola, type PiezaCola } from '../cola';
 import type { Textos } from '../i18n';
 import type { TipoPieza } from '../tipos';
+import { IconoCola, IconoQuitar } from './Iconos';
 
 interface Props {
   piezas: PiezaCola[];
@@ -52,7 +53,7 @@ export function ListaCola({ piezas, seleccionada, onSeleccionar, onQuitar, progr
     <section className="cola" aria-label={c.titulo}>
       <div className="cola__cabecera">
         <h3 className="cola__titulo">
-          {c.titulo} <span className="cola__contador">{c.progresoCola(hechas, piezas.length)}</span>
+          <IconoCola tamano={15} /> {c.titulo} <span className="cola__contador">{c.progresoCola(hechas, piezas.length)}</span>
         </h3>
         <select className="cola__filtro" value={filtro} aria-label={c.filtroEtiqueta} onChange={(e) => setFiltro(e.target.value as FiltroCola)}>
           <option value="todas">{c.filtroTodas}</option>
@@ -99,7 +100,7 @@ export function ListaCola({ piezas, seleccionada, onSeleccionar, onQuitar, progr
                       onQuitar(p.id);
                     }}
                   >
-                    ✕
+                    <IconoQuitar tamano={13} />
                   </button>
                 </div>
                 <div className="cola__detalle">

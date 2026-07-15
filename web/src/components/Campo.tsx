@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Textos } from '../i18n';
 import type { Confianza } from '../tipos';
+import { IconoAviso, IconoCheck } from './Iconos';
 
 export function ChipConfianza({ confianza, editado, t }: { confianza: Confianza; editado?: boolean; t: Textos }) {
   const textoConfianza: Record<Confianza, string> = {
@@ -11,7 +12,7 @@ export function ChipConfianza({ confianza, editado, t }: { confianza: Confianza;
   if (editado) {
     return (
       <span className="chip chip--revisado" title={t.campo.tituloRevisado}>
-        {t.campo.revisado}
+        <IconoCheck tamano={11} /> {t.campo.revisado}
       </span>
     );
   }
@@ -49,7 +50,7 @@ export function Campo({ etiqueta, ayuda, confianza, editado, avisos, t, children
       {children}
       {avisos.map((a, i) => (
         <p key={i} className="campo__mensaje">
-          ⚠ {a}
+          <IconoAviso tamano={13} /> {a}
         </p>
       ))}
     </div>

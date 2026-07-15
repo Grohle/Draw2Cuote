@@ -12,6 +12,17 @@ import { Ajustes } from './components/Ajustes';
 import { Calibracion } from './components/Calibracion';
 import { Campos } from './components/Campos';
 import { Dropzone, type ArchivoPlano } from './components/Dropzone';
+import {
+  BanderaEN,
+  BanderaES,
+  IconoAjustes,
+  IconoAviso,
+  IconoCampos,
+  IconoListado,
+  IconoPrecision,
+  IconoTarifas,
+  IconoUnidades,
+} from './components/Iconos';
 import { ListaCola } from './components/ListaCola';
 import { Listado } from './components/Listado';
 import { type EstadoFeedback, Resultados } from './components/Resultados';
@@ -423,25 +434,30 @@ export default function App() {
             </span>
           )}
           <button className="btn btn--toggle" title={t.app.tituloIdioma} aria-label={t.app.tituloIdioma} onClick={() => cambiarIdioma(idioma === 'es' ? 'en' : 'es')}>
-            🌐 {idioma === 'es' ? 'ES' : 'EN'}
+            {idioma === 'es' ? <BanderaES /> : <BanderaEN />} {idioma === 'es' ? 'ES' : 'EN'}
           </button>
           <button className="btn btn--toggle" title={t.app.tituloUnidades} aria-label={t.app.tituloUnidades} onClick={() => cambiarUnidades(unidades === 'metrico' ? 'imperial' : 'metrico')}>
-            📐 {unidades === 'metrico' ? 'mm' : 'in'}
+            <IconoUnidades /> {unidades === 'metrico' ? 'mm' : 'in'}
           </button>
           <button className="btn btn--ajustes" title={t.app.tituloTarifas} aria-label={t.app.tituloTarifas} onClick={() => setTarifasAbiertas(true)}>
+            <IconoTarifas />
             {t.app.botonTarifas}
           </button>
           <button className="btn btn--ajustes" title={t.app.tituloPrecision} aria-label={t.app.tituloPrecision} onClick={() => setCalibracionAbierta(true)}>
+            <IconoPrecision />
             {t.app.botonPrecision}
           </button>
           <button className="btn btn--ajustes" title={t.app.tituloCampos} aria-label={t.app.tituloCampos} onClick={() => setCamposAbiertos(true)}>
+            <IconoCampos />
             {t.app.botonCampos}
           </button>
           <button className="btn btn--ajustes" title={t.app.tituloListado} aria-label={t.app.tituloListado} onClick={() => setListadoAbierto(true)}>
+            <IconoListado />
             {t.app.botonListado}
             {listado.length > 0 && <span className="btn__contador">{listado.length}</span>}
           </button>
           <button className="btn btn--ajustes" title={t.app.tituloAjustes} aria-label={t.app.tituloAjustes} onClick={() => setAjustesAbiertos(true)}>
+            <IconoAjustes />
             {t.app.botonAjustes}
           </button>
         </div>
@@ -491,7 +507,11 @@ export default function App() {
       <main className="contenido">
         <div className="columna columna--plano">
           <Dropzone archivo={archivo} t={t} onArchivo={anadirPlano} onError={setError} />
-          {pdfNoAdmitido && <div className="error">⚠ {t.app.pdfNoAdmitido(nombreProveedor)}</div>}
+          {pdfNoAdmitido && (
+            <div className="error">
+              <IconoAviso tamano={15} /> {t.app.pdfNoAdmitido(nombreProveedor)}
+            </div>
+          )}
           <button className="btn btn--primario btn--analizar" onClick={procesarCola} disabled={pendientes === 0 || analizando}>
             {etiquetaAnalizar}
           </button>
@@ -506,7 +526,11 @@ export default function App() {
               <p className="pista">{t.app.pista}</p>
             </div>
           )}
-          {error && <div className="error">⚠ {error}</div>}
+          {error && (
+            <div className="error">
+              <IconoAviso tamano={15} /> {error}
+            </div>
+          )}
           <ListaCola
             piezas={cola}
             seleccionada={seleccionada}
