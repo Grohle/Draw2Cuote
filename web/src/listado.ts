@@ -124,17 +124,3 @@ export function tablaACsv(tabla: TablaExport): string {
   for (const fila of tabla.filas) lineas.push(fila.map(escaparCsv).join(','));
   return lineas.join('\n');
 }
-
-function escaparHtml(valor: string | number): string {
-  return String(valor).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/** Tabla HTML que Excel abre como hoja de cálculo (.xls, application/vnd.ms-excel). */
-export function tablaAExcelHtml(tabla: TablaExport, titulo: string): string {
-  const th = tabla.cabeceras.map((c) => `<th>${escaparHtml(c)}</th>`).join('');
-  const filas = tabla.filas
-    .map((fila) => `<tr>${fila.map((v) => `<td>${escaparHtml(v)}</td>`).join('')}</tr>`)
-    .join('');
-  return `<html><head><meta charset="utf-8"><title>${escaparHtml(titulo)}</title></head><body><table border="1">
-<thead><tr>${th}</tr></thead><tbody>${filas}</tbody></table></body></html>`;
-}

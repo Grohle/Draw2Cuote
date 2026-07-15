@@ -1,15 +1,17 @@
 import { useState, useMemo } from 'react';
 import { etiquetaDe, type CamposPersonalizados } from '../camposPersonalizados';
 import { acabadosSugeridos, campoAplica, CALIDADES, ESPESORES_ESTANDAR, familiasOpciones, tiposPiezaOpciones, TOLERANCIAS } from '../catalogo';
+import { descargarCsv, descargarXlsx } from '../descargas';
 import type { OpcionesDesplegado } from '../desplegado';
 import type { Idioma, Textos } from '../i18n';
+import { construirTabla } from '../listado';
 import type { Tarifas } from '../tarifas';
 import type { Aviso, Extraccion, FamiliaMaterial, TipoPieza } from '../tipos';
 import { etiquetaLongitud, listaLongitudMostrada, mmAUnidadMostrada, unidadMostradaAMm, type SistemaUnidades } from '../unidades';
 import { validar } from '../validaciones';
 import { Campo } from './Campo';
 import { Desarrollo } from './Desarrollo';
-import { IconoAnadir, IconoAviso, IconoCheck, IconoCopiar, IconoDescargar, IconoIA, IconoOk, IconoUnidades } from './Iconos';
+import { IconoAnadir, IconoAviso, IconoCheck, IconoDescargar, IconoIA, IconoOk, IconoUnidades } from './Iconos';
 import { Presupuesto } from './Presupuesto';
 
 export type EstadoFeedback = 'inactivo' | 'guardando' | 'guardado' | 'error';
@@ -169,17 +171,12 @@ export function Resultados({
   const tipo = datos.tipo_pieza.valor;
   const aplica = (clave: ClaveCampo) => campoAplica(clave, tipo);
 
-  const exportar = () => {
-    const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${datos.numero_plano.valor ?? 'plano'}-draw2quote.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const copiar = () => navigator.clipboard.writeText(JSON.stringify(datos, null, 2));
+  // Exportación de la pieza actual (una fila) a XLSX o CSV, reutilizando la
+  // misma tabla que el listado (solo columnas con valor).
+  const nombreBase = datos.numero_plano.valor?.trim() || 'pieza';
+  const tablaPieza = () => construirTabla([{ id: 'actual', datos }], tarifas, t, unidades);
+  const exportarXlsx = () => descargarXlsx(`${nombreBase}-draw2quote.xlsx`, tablaPieza(), datos.denominacion.valor?.trim() || nombreBase);
+  const exportarCsv = () => descargarCsv(`${nombreBase}-draw2quote.csv`, tablaPieza());
 
   return (
     <section className="resultados">
@@ -345,13 +342,13 @@ export function Resultados({
           {anadido ? <IconoCheck tamano={15} /> : <IconoAnadir tamano={15} />}
           {anadido ? r.anadido : r.anadirListado}
         </button>
-        <button className="btn" onClick={copiar}>
-          <IconoCopiar tamano={15} />
-          {r.copiarJson}
-        </button>
-        <button className="btn" onClick={exportar}>
+        <button className="btn" onClick={exportarXlsx}>
           <IconoDescargar tamano={15} />
-          {r.descargarJson}
+          {r.exportarXlsx}
+        </button>
+        <button className="btn" onClick={exportarCsv}>
+          <IconoDescargar tamano={15} />
+          {r.exportarCsv}
         </button>
       </div>
     </section>

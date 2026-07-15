@@ -18,6 +18,7 @@ import {
   IconoAjustes,
   IconoAviso,
   IconoCampos,
+  IconoDesplegar,
   IconoListado,
   IconoPrecision,
   IconoTarifas,
@@ -42,6 +43,14 @@ import { cargarUnidades, guardarUnidades, type SistemaUnidades } from './unidade
 function conNegritas(texto: string): ReactNode[] {
   return texto.split(/\*\*(.+?)\*\*/g).map((parte, i) => (i % 2 === 1 ? <strong key={i}>{parte}</strong> : parte));
 }
+
+/** Idiomas disponibles, con su nombre nativo y código corto. Ampliable añadiendo entradas. */
+const IDIOMAS: { id: Idioma; etiqueta: string; codigo: string }[] = [
+  { id: 'es', etiqueta: 'Español', codigo: 'ES' },
+  { id: 'en', etiqueta: 'English', codigo: 'EN' },
+];
+
+const banderaDe = (id: Idioma) => (id === 'es' ? <BanderaES /> : <BanderaEN />);
 
 export default function App() {
   // Cola de planos: cada archivo subido es una pieza; la IA las analiza en orden.
@@ -433,9 +442,26 @@ export default function App() {
               {nombreProveedor.split(' (')[0]}
             </span>
           )}
-          <button className="btn btn--toggle" title={t.app.tituloIdioma} aria-label={t.app.tituloIdioma} onClick={() => cambiarIdioma(idioma === 'es' ? 'en' : 'es')}>
-            {idioma === 'es' ? <BanderaES /> : <BanderaEN />} {idioma === 'es' ? 'ES' : 'EN'}
-          </button>
+          <div className="menu-idioma">
+            <button className="btn btn--toggle" title={t.app.tituloIdioma} aria-label={t.app.tituloIdioma} aria-haspopup="menu">
+              {banderaDe(idioma)} {IDIOMAS.find((l) => l.id === idioma)?.codigo}
+              <IconoDesplegar tamano={13} />
+            </button>
+            <div className="menu-idioma__panel" role="menu">
+              {IDIOMAS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={l.id === idioma}
+                  className={`menu-idioma__item ${l.id === idioma ? 'menu-idioma__item--activo' : ''}`}
+                  onClick={() => cambiarIdioma(l.id)}
+                >
+                  {banderaDe(l.id)} {l.etiqueta}
+                </button>
+              ))}
+            </div>
+          </div>
           <button className="btn btn--toggle" title={t.app.tituloUnidades} aria-label={t.app.tituloUnidades} onClick={() => cambiarUnidades(unidades === 'metrico' ? 'imperial' : 'metrico')}>
             <IconoUnidades /> {unidades === 'metrico' ? 'mm' : 'in'}
           </button>
@@ -474,7 +500,7 @@ export default function App() {
           }}
         />
       )}
-      {calibracionAbierta && <Calibracion onCerrar={() => setCalibracionAbierta(false)} t={t} />}
+      {calibracionAbierta && <Calibracion onCerrar={() => setCalibracionAbierta(false)} t={t} datos={resultadoSel?.datos ?? null} />}
       {camposAbiertos && (
         <Campos
           camposPersonalizados={camposPersonalizados}

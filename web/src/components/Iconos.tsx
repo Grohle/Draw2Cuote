@@ -233,6 +233,15 @@ export function IconoOcr(p: PropsIcono) {
   );
 }
 
+/** Chevron hacia abajo (indicador de menú desplegable). */
+export function IconoDesplegar(p: PropsIcono) {
+  return (
+    <Base {...p}>
+      <path d="m6 9 6 6 6-6" />
+    </Base>
+  );
+}
+
 interface PropsBandera extends SVGProps<SVGSVGElement> {
   /** Ancho en px; la altura guarda proporción 3:2. */
   ancho?: number;
