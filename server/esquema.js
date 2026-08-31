@@ -1,7 +1,42 @@
 import { z } from 'zod/v4';
 
+export const CONFIANZAS = ['alta', 'media', 'baja'];
+
+export const TIPOS_PIEZA = [
+  'chapa_plegada',
+  'corte_laser',
+  'torneado',
+  'fresado',
+  'tubo_perfil',
+  'impresion_3d',
+  'inyeccion',
+  'fundicion',
+  'extrusion',
+  'termoformado',
+  'carpinteria',
+  'otro',
+];
+
+export const FAMILIAS_MATERIAL = [
+  'acero_carbono',
+  'acero_inoxidable',
+  'aluminio',
+  'galvanizado',
+  'cobre_laton',
+  'titanio',
+  'plastico',
+  'madera',
+  'vidrio',
+  'composite',
+  'ceramica',
+  'caucho',
+  'otro',
+];
+
+export const SISTEMAS_UNIDADES = ['metrico', 'imperial'];
+
 const confianza = z
-  .enum(['alta', 'media', 'baja'])
+  .enum(CONFIANZAS)
   .describe(
     'alta: el dato aparece explícito y legible en el plano. media: se deduce de forma razonable. baja: es dudoso o parcialmente legible.'
   );
@@ -21,20 +56,7 @@ const campoNumero = (descripcion) =>
 export const EsquemaExtraccion = z.object({
   tipo_pieza: z.object({
     valor: z
-      .enum([
-        'chapa_plegada',
-        'corte_laser',
-        'torneado',
-        'fresado',
-        'tubo_perfil',
-        'impresion_3d',
-        'inyeccion',
-        'fundicion',
-        'extrusion',
-        'termoformado',
-        'carpinteria',
-        'otro',
-      ])
+      .enum(TIPOS_PIEZA)
       .nullable()
       .describe(
         'Método/proceso de fabricación de la pieza: chapa_plegada (corte y plegado de chapa), corte_laser (chapa/plancha cortada plana, sin plegar), torneado (revolución), fresado (mecanizado CNC/prismático), tubo_perfil (tubo o perfil cortado/curvado), impresion_3d (fabricación aditiva), inyeccion (moldeo por inyección de plástico), fundicion (fundición/colada de metal), extrusion (perfil extruido), termoformado (conformado de lámina plástica), carpinteria (madera/tablero, CNC de madera). Usa "otro" solo si no encaja en ninguno. null solo si es imposible determinarlo.'
@@ -53,21 +75,7 @@ export const EsquemaExtraccion = z.object({
   espesor_mm: campoNumero('Espesor de la chapa o de la pared del tubo en milímetros (cajetín, sección o nota tipo "e=", "t=", "#"). En piezas macizas torneadas o fresadas devuelve null.'),
   material_familia: z.object({
     valor: z
-      .enum([
-        'acero_carbono',
-        'acero_inoxidable',
-        'aluminio',
-        'galvanizado',
-        'cobre_laton',
-        'titanio',
-        'plastico',
-        'madera',
-        'vidrio',
-        'composite',
-        'ceramica',
-        'caucho',
-        'otro',
-      ])
+      .enum(FAMILIAS_MATERIAL)
       .nullable()
       .describe(
         'Familia del material: metales (acero_carbono, acero_inoxidable, aluminio, galvanizado, cobre_laton, titanio) o no metales (plastico, madera, vidrio, composite —fibra de vidrio/carbono—, ceramica, caucho). "otro" si no encaja. null si el plano no lo indica.'
@@ -83,7 +91,7 @@ export const EsquemaExtraccion = z.object({
   num_agujeros: campoNumero('Número total de agujeros/taladros visibles o indicados.'),
   roscas: campoTexto('Roscas indicadas, con métrica y cantidad si es posible (p. ej. "M4 (x1), M6 (x4)"). null si no hay.'),
   sistema_unidades: z
-    .enum(['metrico', 'imperial'])
+    .enum(SISTEMAS_UNIDADES)
     .nullable()
     .describe(
       'Sistema de unidades EN EL QUE ESTÁ ACOTADO EL PLANO: "metrico" si las cotas están en milímetros (cajetín "Unit: mm/mm", sin comillas de pulgada), "imperial" si están en pulgadas (Unit: in/inch, símbolo " o cotas fraccionarias tipo 1-1/2"). IMPORTANTE: independientemente de esto, DEVUELVE SIEMPRE todas las dimensiones convertidas a milímetros. null solo si el plano no permite determinarlo.'

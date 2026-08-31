@@ -24,6 +24,8 @@ const TABLA = {
     proveedorSinPdf: 'Este proveedor no admite PDF: sube una imagen (PNG/JPG) del plano o cambia a Anthropic o Google Gemini en Ajustes.',
     geminiNecesitaClave: 'Google Gemini necesita una clave de API (gratuita en aistudio.google.com).',
     jsonNoCumpleEsquema: (detalle) => `El modelo devolvió un JSON que no cumple el esquema (${detalle}). Prueba con un modelo con visión más capaz o cambia de proveedor.`,
+    valoresDescartados: (detalle) =>
+      `El modelo devolvió valores no interpretables que se han descartado (${detalle}). Revísalos en el plano.`,
     faltaUrlBase: 'Este proveedor necesita una URL base: configúrala en Ajustes.',
     urlNoValida: (url) => `URL base no válida: ${url}`,
     credencialesRechazadas: 'El proveedor rechazó las credenciales: revisa la clave en Ajustes.',
@@ -59,6 +61,8 @@ const TABLA = {
     proveedorSinPdf: 'This provider does not support PDF: upload an image (PNG/JPG) of the drawing or switch to Anthropic or Google Gemini in Settings.',
     geminiNecesitaClave: 'Google Gemini needs an API key (free at aistudio.google.com).',
     jsonNoCumpleEsquema: (detalle) => `The model returned JSON that does not match the schema (${detalle}). Try a more capable vision model or switch providers.`,
+    valoresDescartados: (detalle) =>
+      `The model returned values that could not be interpreted and were discarded (${detalle}). Check them on the drawing.`,
     faltaUrlBase: 'This provider needs a base URL: configure it in Settings.',
     urlNoValida: (url) => `Invalid base URL: ${url}`,
     credencialesRechazadas: 'The provider rejected the credentials: check the key in Settings.',
