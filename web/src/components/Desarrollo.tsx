@@ -1,4 +1,4 @@
-import { calcularDesarrollo, ladoExteriorMm, radioPorDefecto, type MetodoDesplegado, type OpcionesDesplegado } from '../desplegado';
+import { ladoExteriorMm, radioPorDefecto, type Desarrollo as DesarrolloCalc, type EjeDesarrollo, type MetodoDesplegado, type OpcionesDesplegado } from '../desplegado';
 import type { Textos } from '../i18n';
 import type { DesarrolloGeom, Extraccion, LadoGeom } from '../tipos';
 import { etiquetaLongitud, formatearLongitud, mmAUnidadMostrada, unidadMostradaAMm, type SistemaUnidades } from '../unidades';
@@ -6,10 +6,14 @@ import { IconoDesarrollo } from './Iconos';
 
 interface Props {
   datos: Extraccion;
+  /** Cálculo ya hecho en Resultados, que también lo usa para volcar a al campo que le toca. */
+  res: DesarrolloCalc;
   onCambio: (datos: Extraccion) => void;
   unidades: SistemaUnidades;
   opciones: OpcionesDesplegado;
   onCambioOpciones: (o: OpcionesDesplegado) => void;
+  /** Etiqueta visible del campo de cada eje (respeta el renombrado del usuario). */
+  etiquetaEje: (clave: EjeDesarrollo) => string;
   t: Textos;
 }
 
@@ -27,11 +31,10 @@ const LADO_VACIO: LadoGeom = { longitud_mm: 0, cota_interior: false };
  * después una fila con el ángulo y otra con el radio del pliegue que le sigue.
  * El cálculo convierte las cotas interiores a exteriores antes de sumar.
  */
-export function Desarrollo({ datos, onCambio, unidades, opciones, onCambioOpciones, t }: Props) {
+export function Desarrollo({ datos, res, onCambio, unidades, opciones, onCambioOpciones, etiquetaEje, t }: Props) {
   const d = t.desarrollo;
   const u = etiquetaLongitud(unidades);
   const espesor = datos.espesor_mm.valor;
-  const res = calcularDesarrollo(datos, opciones);
   const numPliegues = res.numPliegues;
   const numLados = numPliegues + 1;
 
@@ -164,6 +167,15 @@ export function Desarrollo({ datos, onCambio, unidades, opciones, onCambioOpcion
             </strong>
           </div>
           {!res.tieneLados && <p className="desarrollo__aviso">ℹ {d.faltanLados}</p>}
+          {/* A qué cota de la pieza corresponde cada eje del desplegado. */}
+          {res.tieneLados && res.ejeDesarrollo != null && (
+            <p className="desarrollo__ejes">
+              {res.anchoMm == null
+                ? d.ejeSinB(etiquetaEje(res.ejeDesarrollo))
+                : d.ejes(etiquetaEje(res.ejeDesarrollo), etiquetaEje(res.ejeDesarrollo === 'largo_mm' ? 'ancho_mm' : 'largo_mm'))}
+            </p>
+          )}
+          {res.tieneLados && res.ejeDesarrollo == null && <p className="desarrollo__aviso">ℹ {d.ejeIndeterminado}</p>}
         </div>
       ) : (
         <p className="desarrollo__aviso">ℹ {d.sinEspesor}</p>

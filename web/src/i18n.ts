@@ -74,6 +74,8 @@ const TEXTOS_ES = {
     revisado: 'Revisado',
     tituloRevisado: 'Valor corregido a mano',
     tituloConfianza: (nivel: string) => `Confianza de la lectura automática: ${nivel}`,
+    desdeDesarrollo: 'del desarrollo',
+    tituloDesdeDesarrollo: 'Calculado en el panel de desarrollo de chapa a partir de los lados y los pliegues, no leído del plano.',
   },
   campos: {
     tipo_pieza: 'Tipo de pieza',
@@ -318,6 +320,11 @@ const TEXTOS_ES = {
     baPorPliegue: 'BA',
     bdPorPliegue: 'BD',
     desarrolloAB: 'Desarrollo (a × b)',
+    ejes: (campoA: string, campoB: string): string =>
+      `a cruza los pliegues → va a «${campoA}». b es paralelo a ellos → es «${campoB}», que el plegado no cambia.`,
+    ejeSinB: (campoA: string): string =>
+      `a cruza los pliegues → va a «${campoA}». Falta la otra cota de la pieza para dar b.`,
+    ejeIndeterminado: 'El desarrollo no cuadra con el largo ni con el ancho de la pieza: revisa los lados o esas cotas.',
     numPliegues: (n: number) => `${n} pliegue${n === 1 ? '' : 's'} detectado${n === 1 ? '' : 's'}`,
     sinEspesor: 'Indica el espesor de la chapa para calcular el desarrollo.',
     faltanLados: 'Introduce las longitudes de los lados (del plano) para calcular el desarrollo.',
@@ -505,6 +512,8 @@ const TEXTOS_EN: Textos = {
     revisado: 'Reviewed',
     tituloRevisado: 'Value corrected by hand',
     tituloConfianza: (nivel: string) => `Automatic reading confidence: ${nivel}`,
+    desdeDesarrollo: 'from flat pattern',
+    tituloDesdeDesarrollo: 'Computed in the sheet flat pattern panel from the sides and bends, not read from the drawing.',
   },
   campos: {
     tipo_pieza: 'Part type',
@@ -744,6 +753,11 @@ const TEXTOS_EN: Textos = {
     baPorPliegue: 'BA',
     bdPorPliegue: 'BD',
     desarrolloAB: 'Flat pattern (a × b)',
+    ejes: (campoA: string, campoB: string): string =>
+      `a crosses the bends → it goes to "${campoA}". b runs parallel to them → it's "${campoB}", which bending doesn't change.`,
+    ejeSinB: (campoA: string): string =>
+      `a crosses the bends → it goes to "${campoA}". The part's other dimension is missing, so there's no b.`,
+    ejeIndeterminado: "The flat pattern doesn't match the part's length or width: check the sides or those dimensions.",
     numPliegues: (n: number) => `${n} bend${n === 1 ? '' : 's'} detected`,
     sinEspesor: 'Enter the sheet thickness to compute the flat pattern.',
     faltanLados: 'Enter the side lengths (from the drawing) to compute the flat pattern.',

@@ -1,14 +1,32 @@
 import type { ReactNode } from 'react';
 import type { Textos } from '../i18n';
 import type { Confianza } from '../tipos';
-import { IconoAviso, IconoCheck } from './Iconos';
+import { IconoAviso, IconoCheck, IconoDesarrollo } from './Iconos';
 
-export function ChipConfianza({ confianza, editado, t }: { confianza: Confianza; editado?: boolean; t: Textos }) {
+export function ChipConfianza({
+  confianza,
+  editado,
+  origen,
+  t,
+}: {
+  confianza: Confianza;
+  editado?: boolean;
+  origen?: 'desarrollo';
+  t: Textos;
+}) {
   const textoConfianza: Record<Confianza, string> = {
     alta: t.campo.confianzaAlta,
     media: t.campo.confianzaMedia,
     baja: t.campo.confianzaBaja,
   };
+  // Un valor calculado no tiene "confianza de lectura": no se leyó del plano.
+  if (origen === 'desarrollo' && !editado) {
+    return (
+      <span className="chip chip--calculado" title={t.campo.tituloDesdeDesarrollo}>
+        <IconoDesarrollo tamano={11} /> {t.campo.desdeDesarrollo}
+      </span>
+    );
+  }
   if (editado) {
     return (
       <span className="chip chip--revisado" title={t.campo.tituloRevisado}>
@@ -28,13 +46,15 @@ interface CampoProps {
   ayuda: string;
   confianza: Confianza;
   editado?: boolean;
+  /** El valor no se leyó del plano sino que lo calculó el panel de desarrollo. */
+  origen?: 'desarrollo';
   avisos: string[];
   t: Textos;
   children: ReactNode;
 }
 
-/** Envoltorio de campo: etiqueta + ayuda "?" + chip de confianza + avisos */
-export function Campo({ etiqueta, ayuda, confianza, editado, avisos, t, children }: CampoProps) {
+/** Envoltorio de campo: etiqueta + ayuda "?" + chip de confianza/origen + avisos */
+export function Campo({ etiqueta, ayuda, confianza, editado, origen, avisos, t, children }: CampoProps) {
   const conAviso = avisos.length > 0;
   return (
     <div className={`campo ${conAviso ? 'campo--aviso' : ''} ${confianza === 'baja' && !editado ? 'campo--dudoso' : ''}`}>
@@ -45,7 +65,7 @@ export function Campo({ etiqueta, ayuda, confianza, editado, avisos, t, children
             ?<span className="ayuda__texto">{ayuda}</span>
           </span>
         </label>
-        <ChipConfianza confianza={confianza} editado={editado} t={t} />
+        <ChipConfianza confianza={confianza} editado={editado} origen={origen} t={t} />
       </div>
       {children}
       {avisos.map((a, i) => (

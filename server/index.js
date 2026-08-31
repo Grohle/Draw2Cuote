@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { EsquemaExtraccion, extraerDatosPlano, hayClaveServidor, probarProveedor } from './extract.js';
-import { calcularEstadisticas, registrarFeedback } from './feedback.js';
+import { calcularEstadisticas, camposCalculados, registrarFeedback } from './feedback.js';
 import { leerConfig, guardarConfig } from './config.js';
 import { mensajes } from './mensajes.js';
 import { ocrImagen } from './ocr.js';
@@ -120,6 +120,9 @@ app.post('/api/feedback', (req, res) => {
     const { camposCorregidos } = registrarFeedback({
       extraccionOriginal: original.data,
       extraccionFinal: final.data,
+      // Las marcas del cliente no están en el esquema del modelo, así que Zod
+      // las descarta: se leen del cuerpo tal cual llegó.
+      calculados: camposCalculados(extraccionFinal),
       proveedor,
       modelo,
       imagen,

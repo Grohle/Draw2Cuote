@@ -31,8 +31,29 @@ function confianzaDe(extraccion, campo) {
   return extraccion?.[campo]?.confianza ?? null;
 }
 
-function calcularCamposCorregidos(original, final) {
-  return CAMPOS.filter((campo) => JSON.stringify(valorDe(original, campo)) !== JSON.stringify(valorDe(final, campo)));
+function calcularCamposCorregidos(original, final, camposCalculados = []) {
+  return CAMPOS.filter(
+    (campo) =>
+      !camposCalculados.includes(campo) &&
+      JSON.stringify(valorDe(original, campo)) !== JSON.stringify(valorDe(final, campo))
+  );
+}
+
+/**
+ * Campos cuyo valor final NO lo leyó el modelo sino que lo calculó la app (hoy,
+ * el desarrollo de chapa volcado a su cota). No son correcciones humanas:
+ * contarlos como tales falsearía la calibración, que mide aciertos de LECTURA.
+ * Si el humano lo corrigió después lleva `editado` y vuelve a contar.
+ *
+ * Se leen del cuerpo tal cual llega, porque estas marcas son del cliente y no
+ * forman parte del esquema del modelo (Zod las descarta al validar).
+ */
+export function camposCalculados(extraccion) {
+  if (!extraccion || typeof extraccion !== 'object') return [];
+  return CAMPOS.filter((campo) => {
+    const c = extraccion[campo];
+    return Boolean(c && typeof c === 'object' && c.origen && !c.editado);
+  });
 }
 
 /**
@@ -41,9 +62,9 @@ function calcularCamposCorregidos(original, final) {
  * evento sirve para un futuro fine-tuning multimodal real; sin ella, solo
  * alimenta las lecciones aprendidas en contexto y la calibración.
  */
-export function registrarFeedback({ extraccionOriginal, extraccionFinal, proveedor, modelo, imagen, idioma }) {
+export function registrarFeedback({ extraccionOriginal, extraccionFinal, calculados, proveedor, modelo, imagen, idioma }) {
   if (!existsSync(dirDatos())) mkdirSync(dirDatos(), { recursive: true });
-  const camposCorregidos = calcularCamposCorregidos(extraccionOriginal, extraccionFinal);
+  const camposCorregidos = calcularCamposCorregidos(extraccionOriginal, extraccionFinal, calculados);
   const evento = {
     id: `fb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     timestamp: new Date().toISOString(),

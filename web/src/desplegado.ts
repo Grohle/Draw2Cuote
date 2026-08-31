@@ -87,6 +87,9 @@ export interface PliegueCalc extends CalculoPliegue {
   radioExtraido: boolean;
 }
 
+/** Las dos cotas generales de la pieza entre las que se reparten los ejes a y b. */
+export type EjeDesarrollo = 'largo_mm' | 'ancho_mm';
+
 export interface Desarrollo {
   /** Pieza de chapa con al menos un pliegue: procede calcular desarrollo. */
   aplica: boolean;
@@ -103,8 +106,58 @@ export interface Desarrollo {
   sumaBdMm: number;
   /** Largo desarrollado (a) = Σ lados exteriores − Σ bend deduction, en mm. null si no hay lados. */
   largoDesarrolladoMm: number | null;
-  /** Ancho (b), sin pliegues en ese eje, en mm. */
+  /**
+   * Cota de la pieza que mide la dirección PLEGADA, y a la que por tanto le
+   * corresponde el desarrollo (a). null si no se puede determinar.
+   */
+  ejeDesarrollo: EjeDesarrollo | null;
+  /** Ancho (b): la otra cota, paralela a los pliegues, en mm. */
   anchoMm: number | null;
+}
+
+/**
+ * Margen al comparar una cota con el desarrollo: absorbe los redondeos de
+ * lectura del plano (46 leído frente a 46.02 calculado).
+ */
+const TOLERANCIA_EJE = 1.02;
+
+/**
+ * Reparte las dos cotas generales de la pieza entre los dos ejes del
+ * desplegado. El desarrollo (a) mide la dirección que CRUZA los pliegues; el
+ * ancho (b) es la paralela a ellos, a la que doblar no afecta.
+ *
+ * Para saber cuál es cuál se comparan las cotas con el desarrollo calculado:
+ * doblar solo acorta, así que una cota MAYOR que el desarrollo no puede ser la
+ * dirección plegada (de un fleje de 46 mm no sale una pieza de 224 mm de
+ * ancho). De las que quepan, la más próxima al desarrollo es la plegada y la
+ * otra es b.
+ *
+ * Si NINGUNA cabe, los datos se contradicen y no se señala eje plegado: sin él
+ * el desarrollo no se vuelca a ningún campo, que es lo prudente cuando no
+ * cuadra. Aun así b sigue siendo deducible, porque la cota mayor no puede ser
+ * la plegada en ningún caso.
+ */
+export function repartirEjes(
+  largoMm: number | null,
+  anchoMm: number | null,
+  desarrolloMm: number | null
+): { ejeDesarrollo: EjeDesarrollo | null; anchoMm: number | null } {
+  const candidatos = ([['largo_mm', largoMm], ['ancho_mm', anchoMm]] as const)
+    .filter((c): c is readonly [EjeDesarrollo, number] => c[1] != null && c[1] > 0)
+    .map(([clave, valor]) => ({ clave, valor }));
+
+  if (desarrolloMm == null || candidatos.length === 0) return { ejeDesarrollo: null, anchoMm: null };
+
+  const caben = candidatos.filter((c) => c.valor <= desarrolloMm * TOLERANCIA_EJE);
+  if (caben.length === 0) {
+    return { ejeDesarrollo: null, anchoMm: Math.max(...candidatos.map((c) => c.valor)) };
+  }
+
+  const plegado = caben.reduce((mejor, c) =>
+    Math.abs(c.valor - desarrolloMm) < Math.abs(mejor.valor - desarrolloMm) ? c : mejor
+  );
+  const otro = candidatos.find((c) => c.clave !== plegado.clave);
+  return { ejeDesarrollo: plegado.clave, anchoMm: otro?.valor ?? null };
 }
 
 /** Nº de pliegues que tocan el lado i: los lados de los extremos tienen 1, los intermedios 2. */
@@ -152,7 +205,18 @@ export function calcularDesarrollo(datos: Extraccion, opciones: OpcionesDesplega
   const calculable = aplica && espesor != null && espesor > 0;
 
   if (!calculable || espesor == null) {
-    return { aplica, calculable: false, numPliegues, pliegues: [], ladosExterioresMm: [], tieneLados: false, sumaBdMm: 0, largoDesarrolladoMm: null, anchoMm: datos.ancho_mm.valor };
+    return {
+      aplica,
+      calculable: false,
+      numPliegues,
+      pliegues: [],
+      ladosExterioresMm: [],
+      tieneLados: false,
+      sumaBdMm: 0,
+      largoDesarrolladoMm: null,
+      ejeDesarrollo: null,
+      anchoMm: null,
+    };
   }
 
   const pliegues: PliegueCalc[] = [];
@@ -172,7 +236,21 @@ export function calcularDesarrollo(datos: Extraccion, opciones: OpcionesDesplega
   const sumaLados = ladosExterioresMm.reduce((s, l) => s + l, 0);
   const tieneLados = sumaLados > 0;
   const largoDesarrolladoMm = tieneLados ? sumaLados - sumaBdMm : null;
-  return { aplica, calculable: true, numPliegues, pliegues, ladosExterioresMm, tieneLados, sumaBdMm, largoDesarrolladoMm, anchoMm: datos.ancho_mm.valor };
+  // b no es "el ancho" sin más: es la cota que NO cruza los pliegues, que según
+  // la pieza puede ser el largo o el ancho (ver repartirEjes).
+  const ejes = repartirEjes(datos.largo_mm.valor, datos.ancho_mm.valor, largoDesarrolladoMm);
+  return {
+    aplica,
+    calculable: true,
+    numPliegues,
+    pliegues,
+    ladosExterioresMm,
+    tieneLados,
+    sumaBdMm,
+    largoDesarrolladoMm,
+    ejeDesarrollo: ejes.ejeDesarrollo,
+    anchoMm: ejes.anchoMm,
+  };
 }
 
 /** Radio interior por defecto según las opciones y el espesor. */

@@ -258,6 +258,13 @@ body {
   color: var(--texto-suave);
 }
 
+.desarrollo__ejes {
+  margin: 0.3rem 0 0;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+  line-height: 1.45;
+}
+
 .desarrollo__nota {
   margin: 0.6rem 0 0;
   font-size: 0.78rem;
@@ -1126,6 +1133,13 @@ body {
   color: #7dd3fc;
   border-color: #7dd3fc;
   background: rgba(125, 211, 252, 0.08);
+}
+
+/* Valor calculado (no leído del plano): mismo naranja que el panel de desarrollo. */
+.chip--calculado {
+  color: var(--acento);
+  border-color: var(--acento);
+  background: rgba(249, 115, 22, 0.08);
 }
 
 /* Observaciones y acciones */
