@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { EsquemaExtraccion } from './esquema.js';
+import { ESQUEMA_GEMINI, ESQUEMA_JSON, ESQUEMA_OPENAI } from './esquemaJson.js';
 import { construirEjemplosCorreccion, construirLeccionesAprendidas } from './feedback.js';
 import { mensajes } from './mensajes.js';
 import { ocrImagen } from './ocr.js';
@@ -267,25 +268,34 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
     throw err;
   }
 
-  const esquemaJson = zodOutputFormat(EsquemaExtraccion).schema;
+  const esGoogle = proveedor === 'google';
   const instruccionBase = previa ? instruccionRevision(idioma, previa) : INSTRUCCION[idioma === 'en' ? 'en' : 'es'];
   const ocr = bloqueOcr(ocrTexto, idioma);
+  // Cuando el esquema viaja por el canal nativo del proveedor basta con pedir
+  // JSON a secas; solo si hay que degradar se incrusta el esquema en el prompt,
+  // que cuesta ~16 kB de contexto y el modelo puede copiar mal.
   const instruccion =
     idioma === 'en'
-      ? `${instruccionBase}${ocr}\n\nRespond EXCLUSIVELY with a valid JSON object, no markdown or extra text, that exactly matches this JSON Schema:\n${JSON.stringify(esquemaJson)}`
-      : `${instruccionBase}${ocr}\n\nResponde EXCLUSIVAMENTE con un objeto JSON válido, sin markdown ni texto adicional, que cumpla exactamente este JSON Schema:\n${JSON.stringify(esquemaJson)}`;
+      ? `${instruccionBase}${ocr}\n\nRespond EXCLUSIVELY with a valid JSON object, no markdown or extra text.`
+      : `${instruccionBase}${ocr}\n\nResponde EXCLUSIVAMENTE con un objeto JSON válido, sin markdown ni texto adicional.`;
+  const instruccionConEsquema =
+    idioma === 'en'
+      ? `${instruccion} It must exactly match this JSON Schema:\n${JSON.stringify(ESQUEMA_JSON)}`
+      : `${instruccion} Debe cumplir exactamente este JSON Schema:\n${JSON.stringify(ESQUEMA_JSON)}`;
   const parametros = {
     baseUrl: resolverBaseUrl(proveedor, baseUrl, idioma),
     apiKey,
     model: model.trim(),
     system: previa ? sistemaRevision(idioma) : construirSystemEfectivo(idioma, alias, camposExtra),
     instruccion,
+    instruccionConEsquema,
+    esquema: esGoogle ? ESQUEMA_GEMINI : ESQUEMA_OPENAI,
     mediaType,
     dataBase64,
     idioma,
   };
 
-  const crudo = proveedor === 'google' ? await llamarGoogle(parametros) : await llamarOpenAICompat(parametros);
+  const crudo = esGoogle ? await llamarGoogle(parametros) : await llamarOpenAICompat(parametros);
   // Estos proveedores redactan el JSON desde el esquema del prompt y se desvían
   // en la forma; se repara antes de validar para no tirar todo el análisis por
   // un detalle de formato (ver server/reparar.js).
