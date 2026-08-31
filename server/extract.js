@@ -12,6 +12,7 @@ import {
   probarProveedorRemoto,
   resolverBaseUrl,
 } from './proveedores.js';
+import { repararExtraccion } from './reparar.js';
 
 export { EsquemaExtraccion };
 export const MODELOS_ANTHROPIC = ['claude-opus-4-8', 'claude-sonnet-5', 'claude-haiku-4-5'];
@@ -285,7 +286,10 @@ async function extraerConGenerico({ proveedor, mediaType, dataBase64, apiKey, ba
   };
 
   const crudo = proveedor === 'google' ? await llamarGoogle(parametros) : await llamarOpenAICompat(parametros);
-  const validado = EsquemaExtraccion.safeParse(crudo);
+  // Estos proveedores redactan el JSON desde el esquema del prompt y se desvían
+  // en la forma; se repara antes de validar para no tirar todo el análisis por
+  // un detalle de formato (ver server/reparar.js).
+  const validado = EsquemaExtraccion.safeParse(repararExtraccion(crudo, idioma));
   if (!validado.success) {
     const detalle = validado.error.issues
       .slice(0, 3)
