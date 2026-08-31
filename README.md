@@ -1,178 +1,178 @@
 # Draw2Quote
 
-**De plano a presupuesto en segundos.** Arrastra un plano técnico (PDF o imagen) y la IA extrae los datos que necesitas para presupuestar: dimensiones, espesor, material, calidad, acabado, cantidad, tolerancias, pliegues y agujeros — todo estructurado y con nivel de confianza por campo para evitar lecturas erróneas.
+**From drawing to quote in seconds.** Drop a technical drawing (PDF or image) and the AI extracts the data you need to quote it: dimensions, thickness, material, grade, finish, quantity, tolerances, bends and holes — all structured and with a confidence level per field to avoid misreadings.
 
-> El repositorio se llama `Draw2Cuote` de momento; el nombre del producto es **Draw2Quote**.
+> The repository is currently named `Draw2Cuote`; the product name is **Draw2Quote**.
 
-**Para ejecutarlo solo necesitas tu clave de API de IA** (o un modelo local con Ollama/LM Studio/vLLM): clona, `npm install`, arranca y configura el proveedor en Ajustes. El diseño multi-agente del sistema (extractor + revisor + reglas deterministas + aprendizaje con el uso) está documentado en [ARQUITECTURA.md](ARQUITECTURA.md).
+**All you need to run it is your AI API key** (or a local model with Ollama/LM Studio/vLLM): clone, `npm install`, start it up and configure the provider in Settings. The system's multi-agent design (extractor + reviewer + deterministic rules + learning from usage) is documented in [ARQUITECTURA.md](ARQUITECTURA.md).
 
-## Cómo funciona
+## How it works
 
-1. **Arrastra el plano** (PDF, PNG, JPG, WebP · máx. 32 MB) a la zona de carga.
-2. **Analizar plano**: el backend envía el documento a la API de Claude con *structured outputs* (esquema Zod), de modo que la respuesta siempre tiene la misma forma y no hay texto libre que parsear.
-3. **Revisa y corrige**: cada campo muestra un chip de confianza (alta / media / baja). Las lecturas dudosas y las incoherencias (espesor no comercial, calidad que no cuadra con la familia de material, cantidad ausente…) quedan marcadas con avisos.
-4. **Exporta el JSON** estructurado para alimentar tu sistema de presupuestos.
+1. **Drop the drawing** (PDF, PNG, JPG, WebP · max. 32 MB) onto the upload area.
+2. **Analyze drawing**: the backend sends the document to the Claude API with *structured outputs* (Zod schema), so the response always has the same shape and there's no free text to parse.
+3. **Review and correct**: each field shows a confidence chip (high / medium / low). Doubtful readings and inconsistencies (non-standard thickness, a grade that doesn't match the material family, missing quantity...) are flagged with warnings.
+4. **Export the structured JSON** to feed your quoting system.
 
-### Campos adaptados al tipo de pieza
+### Fields adapted to the part type
 
-La IA detecta primero el **método de fabricación** y la UI adapta los campos según él. Se reconocen los procesos más habituales — chapa plegada, corte láser, torneado, fresado/CNC, tubo/perfil, impresión 3D, inyección, fundición, extrusión, termoformado y carpintería — y las familias de material tanto metálicas como no metálicas: acero al carbono/inoxidable, aluminio, galvanizado, cobre/latón, titanio, plástico, madera, vidrio, composite, cerámica y caucho (con sus grados/calidades habituales). Una pieza torneada muestra longitud y Ø máximo, la chapa muestra espesor y pliegues, los procesos volumétricos (3D, inyección…) piden las cotas envolventes. Las validaciones también cambian según el tipo. El tipo es editable y el formulario se reconfigura al cambiarlo.
+The AI first detects the **manufacturing method** and the UI adapts the fields to it. It recognizes the most common processes — sheet metal bending, laser cutting, turning, milling/CNC, tube/profile, 3D printing, injection molding, casting, extrusion, thermoforming and carpentry — and both metallic and non-metallic material families: carbon/stainless steel, aluminum, galvanized steel, copper/brass, titanium, plastic, wood, glass, composite, ceramic and rubber (with their usual grades/qualities). A turned part shows length and max Ø, sheet metal shows thickness and bends, and volumetric processes (3D, injection...) ask for the bounding dimensions. Validations also change depending on the part type. The type is editable and the form reconfigures itself when it's changed.
 
-El presupuesto cubre con fórmula propia la chapa, el corte, el mecanizado y el tubo; para procesos sin fórmula específica (impresión 3D, inyección, fundición…) estima el **coste de material** por volumen envolvente y avisa de que el coste de proceso debe añadirse a mano — nunca inventa un número.
+The quote covers sheet metal, cutting, machining and tube work with its own formula; for processes without a specific formula (3D printing, injection molding, casting...) it estimates **material cost** from the bounding volume and warns that process cost must be added manually — it never makes up a number.
 
-### Capa de razonamiento tras el scan (verificación)
+### Post-scan reasoning layer (verification)
 
-Con la opción **Revisar la extracción** activada (por defecto), tras leer el plano se hace una **segunda pasada de razonamiento**: el modelo recibe el plano y su primera extracción y **verifica la coherencia de cada campo** (unidades, cotas intercambiadas, familia↔calidad, plausibilidad física) y **vuelve a mirar los campos de confianza media/baja** para confirmarlos o corregirlos. Solo cambia un valor si el plano lo respalda (nunca inventa) y anota cada corrección en las observaciones (`campo: antes → después`). Los resultados revisados muestran el distintivo **Revisado por IA**. Se puede desactivar en Ajustes para ahorrar la segunda llamada; si esa segunda llamada falla, se devuelve la primera extracción sin romper el análisis.
+With the **Review extraction** option enabled (on by default), after reading the drawing a **second reasoning pass** is run: the model receives the drawing and its first extraction and **checks the consistency of each field** (units, swapped dimensions, family↔grade, physical plausibility) and **re-examines the medium/low confidence fields** to confirm or correct them. It only changes a value if the drawing supports it (it never makes things up) and notes every correction in the observations (`field: before → after`). Reviewed results show the **AI-Reviewed** badge. It can be disabled in Settings to save the second call; if that second call fails, the first extraction is returned without breaking the analysis.
 
-### OCR como referencia (guardarraíl para modelos flojos)
+### OCR as a reference (guardrail for weaker models)
 
-Con la opción **OCR de la imagen como referencia** activada (desactivada por defecto), antes del scan la imagen se pasa por **Tesseract** (`tesseract.js`, WASM puro, sin binarios de sistema) y el texto reconocido se inyecta en el prompt como referencia cruda —tokens `texto@(x,y)`— para ayudar al modelo a **cotejar cifras y textos pequeños** que un modelo de visión menos potente suele leer mal (no se trata como verdad absoluta). Es una **dependencia opcional**: si no está instalada o falla, el análisis sigue sin OCR. Solo aplica a **imágenes** (no PDF). La primera vez descarga los datos de idioma de su CDN (requiere Internet); en un equipo sin salida a Internet se apunta a una carpeta local con los `.traineddata` mediante la variable `DRAW2QUOTE_TESSDATA`, y el tope de tiempo se ajusta con `DRAW2QUOTE_OCR_TIMEOUT_MS` (45 s por defecto). Ver [ARQUITECTURA.md](ARQUITECTURA.md) § 2.
+With the **Image OCR as reference** option enabled (off by default), before the scan the image is run through **Tesseract** (`tesseract.js`, pure WASM, no system binaries) and the recognized text is injected into the prompt as raw reference — `text@(x,y)` tokens — to help the model **cross-check figures and small text** that a less capable vision model often misreads (it is not treated as absolute truth). It's an **optional dependency**: if it isn't installed or fails, the analysis still runs without OCR. It only applies to **images** (not PDF). The first time it runs it downloads the language data from its CDN (requires Internet); on a machine without Internet access, point it to a local folder with the `.traineddata` files via the `DRAW2QUOTE_TESSDATA` variable, and the timeout is adjusted with `DRAW2QUOTE_OCR_TIMEOUT_MS` (45 s by default). See [ARQUITECTURA.md](ARQUITECTURA.md) § 2.
 
-### Listado de piezas y exportación
+### Parts list and export
 
-Cada pieza analizada se puede **añadir a un listado** que muestra el **precio total** del conjunto con las tarifas actuales y se **exporta a CSV o Excel**. La exportación incluye **solo las columnas con algún valor** (las columnas totalmente vacías se omiten). El listado se guarda en el navegador.
+Each analyzed part can be **added to a list** that shows the **total price** of the batch using the current rates and can be **exported to CSV or Excel**. The export includes **only the columns that have a value** (columns that are entirely empty are omitted). The list is saved in the browser.
 
-Además de número de plano, denominación y revisión, la extracción incluye la **marca / posición** de la pieza (en muchos despieces es su identificador corto) y el **proyecto / obra** al que pertenece, si figuran en el plano.
+Besides drawing number, description and revision, the extraction includes the part's **mark / item number** (its short identifier in many assembly drawings) and the **project / job** it belongs to, if present on the drawing.
 
-### Campos y alias configurables
+### Configurable fields and aliases
 
-Los datos que extrae la app son fijos (espesor, material, cantidad…), pero el rótulo con el que cada plano los etiqueta es casi infinito: `title`, `dwg`, `nº`, `no`, `mark`, `pos`… En **Campos** puedes, por cada campo:
+The data the app extracts is fixed (thickness, material, quantity...), but the label each drawing uses for it is almost limitless: `title`, `dwg`, `nº`, `no`, `mark`, `pos`... In **Fields** you can, for each field:
 
-- **Renombrar** cómo se muestra en la interfaz (p. ej. "Marca" → "Posición").
-- Añadir los **alias** (rótulos reales de tus planos, separados por comas). Esos alias se envían al lector dentro del prompt de sistema para que sepa dónde mirar, **sin cambiar el esquema de datos**: los campos canónicos siguen siendo los mismos, solo se le enseña al modelo qué etiquetas equivalen a cada uno.
+- **Rename** how it's shown in the interface (e.g. "Mark" → "Position").
+- Add **aliases** (the actual labels used on your drawings, comma-separated). These aliases are sent to the reader inside the system prompt so it knows where to look, **without changing the data schema**: the canonical fields stay the same, the model is just taught which labels correspond to each one.
 
-### Creador de campos automático (con guardarraíles)
+### Automatic field creator (with guardrails)
 
-Si un plano trae un dato claramente rotulado que **no encaja en ningún campo fijo** (peso, escala, tratamiento térmico, norma de soldadura...), el lector lo devuelve como campo adicional y el **creador de campos** lo registra automáticamente. Es una skill pequeña y acotada (`web/src/creadorCampos.ts`) que usan por igual la IA (tras cada análisis) y el humano (a mano en **Campos**), siempre con los mismos guardarraíles: **normalización** del nombre (minúsculas, sin acentos), **comprobación de duplicidad** contra los campos fijos, sus etiquetas en ambos idiomas, tus alias y los campos ya creados, y **límites** de longitud y cantidad. Los campos creados aparecen en los resultados ("Campos adicionales del plano"), se gestionan/eliminan en Campos, se guardan en la configuración automática, y sus nombres se envían al lector para que los siguientes análisis usen exactamente los mismos.
+If a drawing includes a clearly labeled piece of data that **doesn't fit any fixed field** (weight, scale, heat treatment, welding standard...), the reader returns it as an extra field and the **field creator** registers it automatically. It's a small, well-scoped skill (`web/src/creadorCampos.ts`) used both by the AI (after each analysis) and by the human (manually, in **Fields**), always with the same guardrails: name **normalization** (lowercase, no accents), a **duplicate check** against fixed fields, their labels in both languages, your aliases and already-created fields, and length/count **limits**. Created fields appear in the results ("Additional fields from the drawing"), are managed/removed in Fields, are saved in the automatic configuration, and their names are sent to the reader so subsequent analyses use exactly the same ones.
 
-### Cola de planos (análisis por lotes con pre-procesado)
+### Drawing queue (batch analysis with pre-processing)
 
-Puedes **soltar varios planos a la vez** (o ir añadiendo más mientras se analiza): cada uno entra en una cola visible bajo el botón de analizar, con una **barra de estado encima de cada nombre** (vacía en cola, animada mientras trabaja, verde al acabar), desplazable con la rueda del ratón y **filtrable por tipo de fabricación** o por "sin analizar". Al hacer clic en una pieza se ve su análisis en el panel derecho. Mientras la IA analiza una pieza, las herramientas previas (hoy, el **OCR** si está activado) van ejecutándose sobre las siguientes de la cola, de modo que cada análisis llegue con ese trabajo ya adelantado.
+You can **drop several drawings at once** (or keep adding more while analysis is running): each one enters a visible queue under the analyze button, with a **status bar above each name** (empty while queued, animated while working, green when done), scrollable with the mouse wheel and **filterable by manufacturing type** or by "not yet analyzed". Clicking a part shows its analysis in the right-hand panel. While the AI analyzes one part, the pre-processing tools (currently, **OCR** if enabled) keep running on the next items in the queue, so each analysis arrives with that work already done.
 
-### Desarrollo (desplegado) de chapa
+### Sheet metal flat pattern (unfolding)
 
-Cuando la pieza es **chapa plegada con al menos un pliegue**, el lector extrae del plano la **geometría de plegado** —las longitudes de los **lados** (tramos rectos), y por cada pliegue su **ángulo** y **radio interior**— y el panel **Desarrollo de chapa** calcula el despliegue **a × b**:
+When the part is **bent sheet metal with at least one bend**, the reader extracts the **bend geometry** from the drawing — the **side** lengths (straight segments), and for each bend its **angle** and **inner radius** — and the **Sheet metal flat pattern** panel calculates the unfolded **a × b**:
 
-- **Desarrollo (a) = Σ lados en cota exterior − Σ bend deduction**, con `BA = ángulo·(R + K·espesor)` y `BD = 2·(R+espesor)·tan(ángulo/2) − BA`. La anchura (b) es la dimensión sin pliegues.
-- **Cota interior vs exterior**: el lector detecta si cada cara está acotada por dentro o por fuera del doblado. Las cotas interiores se convierten sumando un espesor por cada pliegue que toca esa cara (una U de espesor 2 con interior 46 mide 46+2+2 = 50 por fuera) y la conversión se muestra junto al lado.
-- El perfil se lista en orden y en vertical — cara 1, ángulo 1, radio 1, cara 2… — con cada valor marcado **"del plano"** si se leyó, o **"por defecto"** (90°, radio = espesor) si no aparece. Todo es editable.
-- El **factor K** (posición de la fibra neutra) se estima por R/espesor (fibra neutra) o se fija manual. El método y las correcciones se guardan automáticamente.
+- **Flat pattern (a) = Σ sides in outer dimension − Σ bend deduction**, with `BA = angle·(R + K·thickness)` and `BD = 2·(R+thickness)·tan(angle/2) − BA`. The width (b) is the dimension with no bends.
+- **Inner vs. outer dimension**: the reader detects whether each face is dimensioned from the inside or the outside of the bend. Inner dimensions are converted by adding one thickness for each bend that touches that face (a U-channel of thickness 2 with an inner dimension of 46 measures 46+2+2 = 50 on the outside), and the conversion is shown next to the side.
+- The profile is listed in order and vertically — face 1, angle 1, radius 1, face 2... — with each value flagged **"from drawing"** if it was read, or **"default"** (90°, radius = thickness) if it wasn't. Everything is editable.
+- The **K-factor** (neutral fiber position) is estimated from R/thickness (neutral axis) or set manually. The method and corrections are saved automatically.
 
-### Configuración guardada automáticamente
+### Automatically saved configuration
 
-Cualquier cambio de configuración (idioma, unidades, proveedor/modelo, tarifas, nombres y alias de campos, opciones de desarrollo de chapa) se guarda **automáticamente** en un único JSON en el servidor (`server/datos/config.json`, ignorado por git y con escritura atómica), además de en el navegador. En un equipo nuevo — o en la futura versión de escritorio — la app rehidrata esa configuración desde el archivo al arrancar. La clave de API **no** se guarda en ese archivo: es una credencial y se queda solo en el navegador.
+Any configuration change (language, units, provider/model, rates, field names and aliases, sheet metal unfolding options) is **automatically saved** to a single JSON file on the server (`server/datos/config.json`, git-ignored, written atomically), as well as in the browser. On a new machine — or in the future desktop version — the app rehydrates that configuration from the file on startup. The API key is **not** saved in that file: it's a credential and stays only in the browser.
 
-### Aprendizaje continuo con el uso (ML aplicado)
+### Continuous learning from usage (applied ML)
 
-Draw2Quote no se queda quieto tras el primer prompt: cada corrección que un usuario confirma con **Guardar corrección** se convierte en una señal de entrenamiento que retroalimenta al sistema. El mecanismo, sin necesidad de reentrenar ningún modelo:
+Draw2Quote doesn't stay static after the first prompt: every correction a user confirms with **Save correction** becomes a training signal that feeds back into the system. The mechanism, without needing to retrain any model:
 
-1. **Captura de feedback.** Al pulsar "Guardar corrección" se envían la extracción original del modelo y la extracción final (tras la revisión humana) a `POST /api/feedback`. El servidor calcula qué campos se corrigieron y guarda el evento en `server/datos/feedback.jsonl` (JSONL local, ignorado por git). Guardar sin haber corregido nada también es señal útil: confirma que la confianza alta era correcta.
-2. **Aprendizaje en contexto (retrieval-augmented, sin tocar pesos).** Antes de cada análisis nuevo, el servidor inyecta en el prompt de sistema dos bloques destilados del histórico de correcciones — para cualquier proveedor:
-   - **Lecciones agregadas**: campos que se corrigen con frecuencia, transiciones `null → valor` habituales, valores de calidad/acabado más frecuentes por familia (`construirLeccionesAprendidas`).
-   - **Ejemplos few-shot** (inyección dinámica de ejemplos, MICL): correcciones concretas pasadas presentadas como casos —"una lectura anterior fue `D-8` y la corrección fue `D-B`"— con la instrucción de usarlas como recordatorio del error a vigilar, sin copiar valores (`construirEjemplosCorreccion`). La relevancia se aproxima por recencia/diversidad de campo; la recuperación por similitud visual del recorte queda como hoja de ruta (ver [ARQUITECTURA.md](ARQUITECTURA.md)).
+1. **Feedback capture.** Clicking "Save correction" sends the model's original extraction and the final extraction (after human review) to `POST /api/feedback`. The server calculates which fields were corrected and saves the event to `server/datos/feedback.jsonl` (local JSONL, git-ignored). Saving without having corrected anything is also a useful signal: it confirms that a high confidence reading was correct.
+2. **In-context learning (retrieval-augmented, no weight changes).** Before each new analysis, the server injects two distilled blocks from the correction history into the system prompt — for any provider:
+   - **Aggregated lessons**: fields that get corrected frequently, common `null → value` transitions, the most frequent grade/finish values per family (`construirLeccionesAprendidas`).
+   - **Few-shot examples** (dynamic example injection, MICL): concrete past corrections presented as cases — "a previous reading was `D-8` and the correction was `D-B`" — with the instruction to use them as a reminder of the mistake to watch for, without copying values (`construirEjemplosCorreccion`). Relevance is approximated by recency/field diversity; retrieval by visual similarity of the crop is left as a roadmap item (see [ARQUITECTURA.md](ARQUITECTURA.md)).
 
-   Es el mismo principio que usan los copilots en producción para adaptarse sin fine-tuning: el modelo no cambia, pero el contexto que recibe sí, y eso mueve la precisión medible con el uso real.
-3. **Calibración real.** El panel **Precisión** (`GET /api/estadisticas`) muestra, por campo, qué porcentaje de las veces que el modelo marcó "confianza alta" tuvo que corregirse después — evaluación de modelos de verdad, no solo un contador de uso.
-4. **Export a fine-tuning real.** Al guardar una corrección puedes marcar "Incluir imagen del plano en el dataset de mejora" (desmarcado por defecto, ya que un plano puede contener información sensible del cliente). Con:
+   It's the same principle production copilots use to adapt without fine-tuning: the model doesn't change, but the context it receives does, and that moves measurable accuracy with real-world use.
+3. **Real calibration.** The **Accuracy** panel (`GET /api/estadisticas`) shows, per field, what percentage of the times the model marked "high confidence" it later had to be corrected — real model evaluation, not just a usage counter.
+4. **Export for real fine-tuning.** When saving a correction you can check "Include drawing image in the improvement dataset" (unchecked by default, since a drawing may contain sensitive customer information). Running:
 
    ```bash
    npm run feedback:exportar
    ```
 
-   se convierte `server/datos/feedback.jsonl` en `server/datos/finetuning.jsonl`: un JSONL de mensajes `system` / `user` (imagen + instrucción, o una nota si no se incluyó imagen) / `assistant` (la extracción corregida por el humano) — el formato de partida para un job de fine-tuning o un entrenador LoRA local. Los eventos sin imagen quedan marcados como útiles solo para ajustar criterio textual, no visión.
+   converts `server/datos/feedback.jsonl` into `server/datos/finetuning.jsonl`: a JSONL of `system` / `user` (image + instruction, or a note if no image was included) / `assistant` (the human-corrected extraction) messages — the starting format for a fine-tuning job or a local LoRA trainer. Events without an image are marked as useful only for adjusting textual judgment, not vision.
 
-Las lecciones se activan solo con datos suficientes (mínimo 5 análisis con feedback) para no sacar conclusiones prematuras con poca muestra.
+Lessons only activate once there's enough data (a minimum of 5 analyses with feedback), to avoid drawing premature conclusions from a small sample.
 
-### Presupuesto estimado configurable
+### Configurable estimated quote
 
-Cada análisis incluye un desglose de **Presupuesto estimado** calculado en el navegador a partir de los datos extraídos: material (peso × precio/kg según densidad real del material), corte o mecanizado, agujeros, pliegues/roscas, acabado, recargo por tolerancias críticas y preparación por lote — con precio unitario y total del lote.
+Each analysis includes an **Estimated quote** breakdown calculated in the browser from the extracted data: material (weight × price/kg based on the material's real density), cutting or machining, holes, bends/threads, finish, a surcharge for critical tolerances, and batch setup — with unit price and batch total.
 
-- Usa geometría simplificada (rectángulo/cilindro envolvente, no el perfil real de la pieza): es una estimación de orden de magnitud, no un presupuesto de nesting real. Cada aproximación usada queda anotada explícitamente bajo el desglose.
-- Si falta un dato imprescindible para calcular (p. ej. cantidad o espesor), se indica claramente qué falta en vez de asumir un valor.
-- Todas las tarifas (€/kg por familia de material, €/m de corte, €/min de mecanizado, coste por agujero/pliegue/rosca, acabado, preparación, recargos y margen) son **editables en Tarifas** y se guardan en tu navegador — ajústalas a los costes reales de tu taller.
+- It uses simplified geometry (bounding rectangle/cylinder, not the part's actual profile): it's an order-of-magnitude estimate, not a real nesting-based quote. Every approximation used is explicitly noted under the breakdown.
+- If a piece of data essential to the calculation is missing (e.g. quantity or thickness), it clearly states what's missing instead of assuming a value.
+- All rates (€/kg per material family, €/m of cutting, €/min of machining, cost per hole/bend/thread, finish, setup, surcharges and margin) are **editable in Rates** and are saved in your browser — adjust them to your shop's real costs.
 
-### Precisión y validaciones automáticas
+### Accuracy and automatic validations
 
-- El modelo tiene prohibido inventar: si un dato no es legible devuelve `null` y lo explica en *Observaciones*.
-- Todas las dimensiones se normalizan a milímetros.
-- Confianza por campo: cualquier duda se marca `media` o `baja` y la UI la resalta para revisión humana.
-- Validaciones locales: espesores comerciales, coherencia familia↔calidad, rangos razonables, cotas intercambiadas.
-- Helpers en cada campo (icono `?`) con la explicación de qué es y de dónde sale en el plano.
+- The model is forbidden from making things up: if a piece of data isn't legible it returns `null` and explains why in *Observations*.
+- All dimensions are normalized to millimeters.
+- Confidence per field: any doubt is marked `medium` or `low` and the UI highlights it for human review.
+- Local validations: standard thicknesses, family↔grade consistency, reasonable ranges, swapped dimensions.
+- Helpers on each field (a `?` icon) explaining what it is and where it comes from on the drawing.
 
-### Idioma y unidades
+### Language and units
 
-La cabecera incluye dos selectores: **ES/EN** (con la bandera del idioma activo) cambia todo el texto de la interfaz (campos, ayudas, avisos de validación, presupuesto, mensajes del servidor) y **mm/in** cambia cómo se muestran y editan las dimensiones. Ambos se guardan en el navegador y se recuerdan entre sesiones.
+The header includes two selectors: **ES/EN** (with the flag of the active language) changes all the interface text (fields, help, validation warnings, quote, server messages) and **mm/in** changes how dimensions are shown and edited. Both are saved in the browser and remembered between sessions.
 
-- **Detección automática de unidades del plano**: al analizar, el modelo detecta si el plano está acotado en milímetros o en pulgadas y la vista cambia sola al sistema correspondiente (se muestra un distintivo "Plano acotado en mm / en pulgadas"). Las cotas se devuelven siempre en mm y se convierten para mostrarse.
-- El dato se almacena siempre en milímetros (y kilogramos para el peso); el sistema de unidades solo afecta a la capa de presentación — al escribir un valor en pulgadas se convierte a mm antes de guardarlo, sin arrastrar redondeos en el valor almacenado.
-- El presupuesto estimado da el mismo total en € independientemente de la unidad mostrada: solo cambia el texto de las líneas (p. ej. "Material (4.03 lb × ...)" en vez de "Material (1.83 kg × ...)").
-- Las tarifas (Tarifas) se gestionan siempre en unidades métricas (€/kg, €/m) para no complicar la configuración del taller.
-- El idioma elegido también viaja al servidor con cada análisis: los mensajes de error de la API y los datos de ejemplo del modo demo se sirven en el idioma activo.
+- **Automatic detection of the drawing's units**: when analyzing, the model detects whether the drawing is dimensioned in millimeters or inches and the view switches automatically to the corresponding system (a "Drawing dimensioned in mm / in inches" badge is shown). Dimensions are always returned in mm and converted for display.
+- Data is always stored in millimeters (and kilograms for weight); the unit system only affects the presentation layer — when you enter a value in inches it's converted to mm before being stored, without carrying rounding errors into the stored value.
+- The estimated quote gives the same total in € regardless of the displayed unit: only the line text changes (e.g. "Material (4.03 lb × ...)" instead of "Material (1.83 kg × ...)").
+- Rates (Rates) are always managed in metric units (€/kg, €/m) to keep the shop's configuration simple.
+- The chosen language also travels to the server with each analysis: API error messages and the demo mode's sample data are served in the active language.
 
-## Puesta en marcha
+## Getting started
 
 ```bash
 npm install
 npm --prefix web install
 
-# desarrollo (frontend en :5173 con proxy al backend en :3001)
+# development (frontend on :5173 with a proxy to the backend on :3001)
 export ANTHROPIC_API_KEY=sk-ant-...
 npm run dev
 
-# producción
+# production
 npm run build
-npm start   # sirve la app compilada en :3001
+npm start   # serves the built app on :3001
 ```
 
-### Versión de escritorio (instalable .exe)
+### Desktop version (installable .exe)
 
-Para quien no quiera usar la versión web hay un empaquetado de escritorio con Electron en `desktop/` (separado del `package.json` raíz para que la versión web no descargue Electron). La app de escritorio arranca el mismo servidor embebido y guarda `config.json` y el feedback en el perfil del usuario (`%APPDATA%/Draw2Quote` en Windows), sobreviviendo a reinstalaciones.
+For anyone who doesn't want to use the web version, there's a desktop build with Electron in `desktop/` (kept separate from the root `package.json` so the web version doesn't download Electron). The desktop app starts the same embedded server and stores `config.json` and feedback in the user's profile (`%APPDATA%/Draw2Quote` on Windows), surviving reinstalls.
 
 ```bash
-# preparar la app (una vez)
+# prepare the app (once)
 npm install && npm --prefix web install && npm run build
 
-# construir el instalable (ejecutar EN Windows para el .exe)
+# build the installer (run ON Windows for the .exe)
 cd desktop
 npm install
-npm run build:win     # → desktop/dist/Draw2Quote Setup 0.1.0.exe (instalador NSIS)
+npm run build:win     # → desktop/dist/Draw2Quote Setup 0.1.0.exe (NSIS installer)
 
-# probar en modo escritorio sin empaquetar
+# test in desktop mode without packaging
 npm run dev
 ```
 
-> El instalador de Windows (**NSIS .exe**) debe generarse en Windows (o con Wine). Hay también targets `build:linux` (AppImage) y `build:mac` (DMG). Una vez instalado, en Ajustes se configura la clave de API igual que en la web.
+> The Windows installer (**NSIS .exe**) must be built on Windows (or with Wine). There are also `build:linux` (AppImage) and `build:mac` (DMG) targets. Once installed, the API key is configured in Settings just like on the web.
 
-### Configurar la API desde la app (multi-proveedor)
+### Configuring the API from the app (multi-provider)
 
-En **Ajustes** (cabecera) eliges el proveedor de IA sin tocar el servidor:
+In **Settings** (header) you choose the AI provider without touching the server:
 
-| Proveedor | Tipo | Clave | PDF | Notas |
+| Provider | Type | Key | PDF | Notes |
 |---|---|---|---|---|
-| **Anthropic Claude** | nube | sí | sí | Máxima precisión; structured outputs nativos. Por defecto Opus 4.8. |
-| **Google Gemini** | nube (capa gratuita) | sí (gratis en aistudio.google.com) | sí | `gemini-2.5-flash` por defecto. |
-| **Ollama** | local | no | no, solo imágenes | URL por defecto `http://localhost:11434/v1`. Usa un modelo con visión (`qwen2.5vl`, `llama3.2-vision`...). |
-| **LM Studio** | local | no | no, solo imágenes | URL por defecto `http://localhost:1234/v1`. |
-| **vLLM** | local/servidor | opcional | no, solo imágenes | URL por defecto `http://localhost:8000/v1`. |
-| **API compatible OpenAI** | cloud personalizado | opcional | no, solo imágenes | OpenRouter, Groq, Mistral, DeepSeek, Together... indica la URL base (`.../v1`). |
+| **Anthropic Claude** | cloud | yes | yes | Highest accuracy; native structured outputs. Defaults to Opus 4.8. |
+| **Google Gemini** | cloud (free tier) | yes (free at aistudio.google.com) | yes | Defaults to `gemini-2.5-flash`. |
+| **Ollama** | local | no | no, images only | Default URL `http://localhost:11434/v1`. Use a vision-capable model (`qwen2.5vl`, `llama3.2-vision`...). |
+| **LM Studio** | local | no | no, images only | Default URL `http://localhost:1234/v1`. |
+| **vLLM** | local/server | optional | no, images only | Default URL `http://localhost:8000/v1`. |
+| **OpenAI-compatible API** | custom cloud | optional | no, images only | OpenRouter, Groq, Mistral, DeepSeek, Together... provide the base URL (`.../v1`). |
 
-- La configuración (proveedor, URL base, clave, modelo) se guarda solo en tu navegador (localStorage) y viaja a tu servidor de Draw2Quote con cada análisis. No la uses en un equipo compartido.
-- **Probar conexión** valida credenciales y URL contra el proveedor elegido sin gastar tokens.
-- Con Anthropic se usan *structured outputs* nativos; con el resto, el esquema JSON se incrusta en el prompt, se pide modo JSON y la respuesta se **valida con Zod en el servidor** — si el modelo no cumple el esquema, verás un error claro en vez de datos corruptos.
-- Los proveedores compatibles OpenAI solo aceptan imágenes; para PDF usa Anthropic o Gemini (la UI te avisa).
+- The configuration (provider, base URL, key, model) is saved only in your browser (localStorage) and is sent to your Draw2Quote server with each analysis. Don't use it on a shared machine.
+- **Test connection** validates credentials and URL against the chosen provider without spending tokens.
+- With Anthropic, native *structured outputs* are used; with the rest, the JSON schema is embedded in the prompt, JSON mode is requested, and the response is **validated with Zod on the server** — if the model doesn't comply with the schema, you'll get a clear error instead of corrupted data.
+- OpenAI-compatible providers only accept images; for PDF use Anthropic or Gemini (the UI warns you).
 
-Sin configuración (ni `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` en el servidor) la app funciona en **modo demo**: devuelve datos de ejemplo para poder probar la interfaz completa sin credenciales.
+With no configuration set (no `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` on the server) the app runs in **demo mode**: it returns sample data so you can try out the full interface without credentials.
 
-## Estructura
+## Structure
 
 ```
-server/          Backend Express (ESM, sin build)
-  index.js       API: POST /api/extract, GET /api/status + estáticos en producción
-  extract.js     Llamada a Claude (claude-opus-4-8) con structured outputs + esquema Zod
-web/             Frontend React + Vite + TypeScript
-  src/App.tsx            Página principal (dropzone + resultados)
-  src/components/        Dropzone, Campo (chip confianza + ayuda), Resultados
-  src/catalogo.ts        Espesores comerciales, calidades por familia, tolerancias, acabados, textos de ayuda
-  src/validaciones.ts    Reglas de coherencia que generan los avisos
+server/          Express backend (ESM, no build step)
+  index.js       API: POST /api/extract, GET /api/status + static files in production
+  extract.js     Call to Claude (claude-opus-4-8) with structured outputs + Zod schema
+web/             React + Vite + TypeScript frontend
+  src/App.tsx            Main page (dropzone + results)
+  src/components/        Dropzone, Field (confidence chip + help), Results
+  src/catalogo.ts        Standard thicknesses, grades per family, tolerances, finishes, help text
+  src/validaciones.ts    Consistency rules that generate the warnings
 ```
 
 ## API
@@ -183,10 +183,10 @@ web/             Frontend React + Vite + TypeScript
 { "filename": "PL-2041.pdf", "mediaType": "application/pdf", "dataBase64": "..." }
 ```
 
-Respuesta: `{ "demo": false, "datos": { "espesor_mm": { "valor": 3, "confianza": "alta" }, ... , "observaciones": [] } }`
+Response: `{ "demo": false, "datos": { "espesor_mm": { "valor": 3, "confianza": "alta" }, ... , "observaciones": [] } }`
 
-El `config` de la petición admite `alias` — un mapa `{ campo: ["rótulo1", "rótulo2"] }` con los nombres que los planos del usuario dan a cada campo — y `camposExtra` — la lista de nombres de campos adicionales ya definidos —, que el servidor inyecta en el prompt del lector. El body admite además `ocrTexto` (string o null): el OCR ya pre-calculado por la cola, para no repetirlo en el servidor.
+The request's `config` accepts `alias` — a map `{ field: ["label1", "label2"] }` with the names the user's drawings give to each field — and `camposExtra` — the list of already-defined extra field names —, which the server injects into the reader's prompt. The body also accepts `ocrTexto` (string or null): the OCR already computed by the queue, so it doesn't need to be repeated on the server.
 
-`POST /api/ocr` — pre-procesado de la cola: `{ "mediaType": "image/png", "dataBase64": "..." }` → `{ "texto": "25.4@(0.20,0.15) ..." | null }`. Devuelve null si el OCR no aplica (PDF) o no está disponible; nunca falla el análisis por esto.
+`POST /api/ocr` — queue pre-processing: `{ "mediaType": "image/png", "dataBase64": "..." }` → `{ "texto": "25.4@(0.20,0.15) ..." | null }`. Returns null if OCR doesn't apply (PDF) or isn't available; it never breaks the analysis because of this.
 
-`GET /api/config` · `PUT /api/config` — leen y guardan la configuración del usuario en `server/datos/config.json` (guardado automático desde la UI; la clave de API queda excluida).
+`GET /api/config` · `PUT /api/config` — read and save the user's configuration in `server/datos/config.json` (auto-saved from the UI; the API key is excluded).
