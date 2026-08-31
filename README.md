@@ -157,7 +157,8 @@ In **Settings** (header) you choose the AI provider without touching the server:
 
 - The configuration (provider, base URL, key, model) is saved only in your browser (localStorage) and is sent to your Draw2Quote server with each analysis. Don't use it on a shared machine.
 - **Test connection** validates credentials and URL against the chosen provider without spending tokens.
-- With Anthropic, native *structured outputs* are used; with the rest, the JSON schema is embedded in the prompt, JSON mode is requested, and the response is **validated with Zod on the server** — if the model doesn't comply with the schema, you'll get a clear error instead of corrupted data.
+- **The same schema is enforced on every provider, through its own native channel**: `output_config` on Anthropic, `responseSchema` on Gemini, and `response_format: json_schema` (strict mode) on OpenAI-compatible servers, which vLLM, LM Studio, Ollama and OpenRouter apply with guided decoding. All three are generated from the same Zod schema, so the shape isn't left to the model's goodwill. If a server rejects its native channel, the request steps down (plain JSON mode, then text) and only then carries the schema written into the prompt.
+- Whatever comes back is repaired and **validated with Zod on the server**: small deviations in shape (a bare scalar where an object goes, a value written as `"25.4 mm"`) are fixed without touching the reading, anything unreadable is left as `null` and noted in the observations, and only a genuinely unusable response produces an error — never corrupted data.
 - OpenAI-compatible providers only accept images; for PDF use Anthropic or Gemini (the UI warns you).
 
 With no configuration set (no `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` on the server) the app runs in **demo mode**: it returns sample data so you can try out the full interface without credentials.

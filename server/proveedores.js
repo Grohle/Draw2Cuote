@@ -73,12 +73,44 @@ export function extraerJson(texto, idioma) {
   return JSON.parse(sinVallas.slice(inicio, fin + 1));
 }
 
-/** Llamada a un servidor compatible con la API de chat de OpenAI. */
-export async function llamarOpenAICompat({ baseUrl, apiKey, model, system, instruccion, mediaType, dataBase64, idioma }) {
+/**
+ * Códigos con los que un servidor dice "no entiendo ese parámetro". Solo ante
+ * ellos se baja un escalón de imposición del esquema; un 401 (credenciales), un
+ * 404 (modelo inexistente) o un 500 son errores de verdad y se propagan tal
+ * cual, sin gastar reintentos.
+ */
+const NO_ADMITIDO = new Set([400, 422]);
+
+/** Descarta una respuesta que no se va a leer, para no dejar la conexión abierta. */
+async function descartar(res) {
+  await res.body?.cancel().catch(() => {});
+}
+
+/**
+ * Llamada a un servidor compatible con la API de chat de OpenAI.
+ *
+ * Se intenta imponer el esquema por el canal nativo (`json_schema` en modo
+ * estricto, que vLLM, LM Studio, Ollama y OpenRouter aplican con decodificación
+ * guiada) y solo se degrada si el servidor lo rechaza: primero a modo JSON
+ * suelto, luego a texto. En cuanto se deja de imponer el esquema, la petición
+ * pasa a llevarlo escrito en el prompt, que es la única red que queda.
+ */
+export async function llamarOpenAICompat({
+  baseUrl,
+  apiKey,
+  model,
+  system,
+  instruccion,
+  instruccionConEsquema,
+  esquema,
+  mediaType,
+  dataBase64,
+  idioma,
+}) {
   const url = `${baseUrl}/chat/completions`;
   const cabeceras = { 'content-type': 'application/json' };
   if (apiKey) cabeceras.authorization = `Bearer ${apiKey}`;
-  const cuerpoBase = {
+  const cuerpo = (texto, extra) => ({
     model,
     temperature: 0,
     max_tokens: 8192,
@@ -88,53 +120,78 @@ export async function llamarOpenAICompat({ baseUrl, apiKey, model, system, instr
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: `data:${mediaType};base64,${dataBase64}` } },
-          { type: 'text', text: instruccion },
+          { type: 'text', text: texto },
         ],
       },
     ],
-  };
+    ...extra,
+  });
 
-  // Primero con modo JSON; si el servidor no lo soporta (400), reintenta sin él.
-  let res = await hacerFetch(
-    url,
-    { method: 'POST', headers: cabeceras, body: JSON.stringify({ ...cuerpoBase, response_format: { type: 'json_object' } }) },
-    idioma
-  );
-  if (res.status === 400) {
-    res = await hacerFetch(url, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpoBase) }, idioma);
+  const intentos = [
+    cuerpo(instruccion, {
+      response_format: { type: 'json_schema', json_schema: { name: 'extraccion_plano', strict: true, schema: esquema } },
+    }),
+    cuerpo(instruccionConEsquema, { response_format: { type: 'json_object' } }),
+    cuerpo(instruccionConEsquema),
+  ];
+
+  let res;
+  for (const [i, cuerpoIntento] of intentos.entries()) {
+    res = await hacerFetch(url, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpoIntento) }, idioma);
+    if (res.ok || !NO_ADMITIDO.has(res.status) || i === intentos.length - 1) break;
+    await descartar(res);
   }
-  const cuerpo = await res.json().catch(() => null);
+
+  const respuesta = await res.json().catch(() => null);
   if (!res.ok) {
-    throw errorProveedor(res.status, cuerpo?.error?.message ?? cuerpo?.message, idioma);
+    throw errorProveedor(res.status, respuesta?.error?.message ?? respuesta?.message, idioma);
   }
-  const texto = cuerpo?.choices?.[0]?.message?.content;
+  const texto = respuesta?.choices?.[0]?.message?.content;
   if (!texto) {
     throw conStatus(new Error(mensajes(idioma).respuestaVacia), 502);
   }
   return extraerJson(texto, idioma);
 }
 
-/** Llamada a la API Generative Language de Google (Gemini). */
-export async function llamarGoogle({ baseUrl, apiKey, model, system, instruccion, mediaType, dataBase64, idioma }) {
+/**
+ * Llamada a la API Generative Language de Google (Gemini). Se le pasa el
+ * esquema en `responseSchema`, que Gemini impone al decodificar; si lo rechaza
+ * (modelo antiguo o esquema no admitido) se reintenta pidiendo solo JSON, ya
+ * con el esquema escrito en el prompt.
+ */
+export async function llamarGoogle({
+  baseUrl,
+  apiKey,
+  model,
+  system,
+  instruccion,
+  instruccionConEsquema,
+  esquema,
+  mediaType,
+  dataBase64,
+  idioma,
+}) {
   const url = `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-  const res = await hacerFetch(
-    url,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: system }] },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ inline_data: { mime_type: mediaType, data: dataBase64 } }, { text: instruccion }],
-          },
-        ],
-        generationConfig: { response_mime_type: 'application/json', temperature: 0 },
-      }),
-    },
-    idioma
-  );
+  const peticion = (texto, generationConfig) => ({
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: system }] },
+      contents: [
+        {
+          role: 'user',
+          parts: [{ inline_data: { mime_type: mediaType, data: dataBase64 } }, { text: texto }],
+        },
+      ],
+      generationConfig: { response_mime_type: 'application/json', temperature: 0, ...generationConfig },
+    }),
+  });
+
+  let res = await hacerFetch(url, peticion(instruccion, { response_schema: esquema }), idioma);
+  if (NO_ADMITIDO.has(res.status)) {
+    await descartar(res);
+    res = await hacerFetch(url, peticion(instruccionConEsquema, {}), idioma);
+  }
   const cuerpo = await res.json().catch(() => null);
   if (!res.ok) {
     throw errorProveedor(res.status, cuerpo?.error?.message, idioma);
