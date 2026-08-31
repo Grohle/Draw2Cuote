@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { etiquetaDe, type CamposPersonalizados } from '../camposPersonalizados';
 import { acabadosSugeridos, campoAplica, CALIDADES, ESPESORES_ESTANDAR, familiasOpciones, tiposPiezaOpciones, TOLERANCIAS } from '../catalogo';
 import { descargarCsv, descargarXlsx } from '../descargas';
-import type { OpcionesDesplegado } from '../desplegado';
+import { calcularDesarrollo, type OpcionesDesplegado } from '../desplegado';
 import type { Idioma, Textos } from '../i18n';
 import { construirTabla } from '../listado';
 import type { Tarifas } from '../tarifas';
@@ -66,6 +66,22 @@ export function Resultados({
   const avisos = useMemo(() => validar(datos, t, unidades), [datos, t, unidades]);
   const avisosDe = (campo: keyof Extraccion) => avisos.filter((a) => a.campo === campo).map((a) => a.mensaje);
   const r = t.resultados;
+  const desarrollo = useMemo(() => calcularDesarrollo(datos, opcionesDesplegado), [datos, opcionesDesplegado]);
+
+  // El desarrollo calculado es la cota real de la dirección plegada, así que se
+  // vuelca al campo que le toca (largo o ancho) para que presupuesto, listado y
+  // exportación cuenten lo mismo que el panel. Se marca como calculado, y una
+  // corrección a mano manda: a partir de ahí el cálculo ya no lo pisa.
+  useEffect(() => {
+    const { ejeDesarrollo, largoDesarrolladoMm } = desarrollo;
+    if (ejeDesarrollo == null || largoDesarrolladoMm == null) return;
+    const campo = datos[ejeDesarrollo];
+    if (campo.editado) return;
+    // Al micrómetro: sobra para chapa y evita arrastrar 15 decimales al listado y a la exportación.
+    const valor = Number(largoDesarrolladoMm.toFixed(3));
+    if (campo.valor != null && Math.abs(campo.valor - valor) < 0.001) return;
+    onCambio({ ...datos, [ejeDesarrollo]: { valor, confianza: campo.confianza, origen: 'desarrollo' } });
+  }, [desarrollo, datos, onCambio]);
   /** Etiqueta a mostrar de un campo: la personalizada por el usuario o la de por defecto. */
   const et = (clave: ClaveCampo, porDefecto: string) => etiquetaDe(clave, porDefecto, camposPersonalizados);
 
@@ -136,6 +152,7 @@ export function Resultados({
         ayuda={t.ayudas[clave]}
         confianza={campo.confianza}
         editado={campo.editado}
+        origen={campo.origen}
         avisos={avisosDe(clave)}
         t={t}
       >
@@ -289,7 +306,19 @@ export function Resultados({
       )}
 
       {tipo === 'chapa_plegada' && (datos.num_pliegues.valor ?? 0) >= 1 && (
-        <Desarrollo datos={datos} onCambio={onCambio} unidades={unidades} opciones={opcionesDesplegado} onCambioOpciones={onCambioDesplegado} t={t} />
+        <Desarrollo
+          datos={datos}
+          res={desarrollo}
+          onCambio={onCambio}
+          unidades={unidades}
+          opciones={opcionesDesplegado}
+          onCambioOpciones={onCambioDesplegado}
+          // Aquí el tipo es siempre chapa plegada, así que el largo usa su etiqueta corta.
+          etiquetaEje={(clave) =>
+            clave === 'largo_mm' ? et('largo_mm', t.campoCorto.largo_chapa) : et('ancho_mm', t.campos.ancho_mm)
+          }
+          t={t}
+        />
       )}
 
       <Presupuesto datos={datos} tarifas={tarifas} onAbrirTarifas={onAbrirTarifas} t={t} unidades={unidades} />

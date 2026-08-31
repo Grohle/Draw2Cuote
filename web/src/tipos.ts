@@ -5,6 +5,12 @@ export interface Campo<T> {
   confianza: Confianza;
   /** true cuando el usuario ha corregido el valor a mano */
   editado?: boolean;
+  /**
+   * De dónde sale el valor cuando NO lo leyó el modelo del plano. 'desarrollo':
+   * lo calcula el panel de desarrollo de chapa a partir de la geometría de
+   * plegado. Un valor así no cuenta como corrección humana en el feedback.
+   */
+  origen?: 'desarrollo';
 }
 
 export type FamiliaMaterial =

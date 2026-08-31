@@ -15,12 +15,15 @@ export function normalizarExtraccion(datos: unknown): Extraccion {
   const salida: Record<string, unknown> = {};
 
   for (const clave of CLAVES_CAMPO) {
-    const campo = fuente[clave] as { valor?: unknown; confianza?: unknown; editado?: unknown } | undefined;
+    const campo = fuente[clave] as { valor?: unknown; confianza?: unknown; editado?: unknown; origen?: unknown } | undefined;
     if (campo && typeof campo === 'object') {
       salida[clave] = {
         valor: 'valor' in campo ? campo.valor : null,
         confianza: CONFIANZAS.includes(campo.confianza as Confianza) ? campo.confianza : 'media',
         ...(campo.editado ? { editado: true } : {}),
+        // Procedencia de un valor calculado (no leído del plano): se conserva
+        // para que al recargar el listado siga marcado como tal.
+        ...(campo.origen === 'desarrollo' ? { origen: 'desarrollo' as const } : {}),
       };
     } else {
       salida[clave] = { valor: null, confianza: 'media' };
