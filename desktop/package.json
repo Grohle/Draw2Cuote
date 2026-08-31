@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Empaquetado de escritorio (Electron) de Draw2Quote. Separado del package.json raíz para que la versión web no descargue Electron.",
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "dev": "electron ..",
     "build:win": "electron-builder --config electron-builder.yml --win",
