@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Draw2Quote — de plano (PDF/imagen) a datos de presupuesto estructurados con IA",
+  "license": "GPL-3.0-or-later",
   "main": "desktop/main.cjs",
   "scripts": {
     "dev": "concurrently -k -n server,web \"npm:dev:server\" \"npm:dev:web\"",

@@ -191,3 +191,13 @@ The request's `config` accepts `alias` — a map `{ field: ["label1", "label2"] 
 `POST /api/ocr` — queue pre-processing: `{ "mediaType": "image/png", "dataBase64": "..." }` → `{ "texto": "25.4@(0.20,0.15) ..." | null }`. Returns null if OCR doesn't apply (PDF) or isn't available; it never breaks the analysis because of this.
 
 `GET /api/config` · `PUT /api/config` — read and save the user's configuration in `server/datos/config.json` (auto-saved from the UI; the API key is excluded).
+
+## License
+
+Copyright (C) 2026 Grohle
+
+Draw2Quote is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License** as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU General Public License](LICENSE) for more details.
+
+In practice: you may use, study, modify and redistribute it freely — including commercially — provided that anything you distribute built from this code stays under the same license and ships with its source. The full text is in [LICENSE](LICENSE).
